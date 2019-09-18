@@ -266,12 +266,12 @@ def global_rules(world, player):
     add_rule(world.get_location('Hyrule Castle - Map Guard Key Drop', player), lambda state: state.can_kill_most_things(player))
     add_rule(world.get_location('Hyrule Castle - Boomerang Guard Key Drop', player), lambda state: state.can_kill_most_things(player))
 
-    # Hyrule Castle: There are three keys and we don't know how we shuffled, so we
-    # need three keys to be accessible before you use any of these doors.
+    # Hyrule Castle: There are four keys and we don't know how we shuffled, so we
+    # need four keys to be accessible before you use any of these doors.
     # TODO: Generate key rules in the shuffler. (But make sure this way works first.)
-    for door in ['Sewers Key Rat Key Door N', 'Sewers Secret Room Key Door S',
-             'Sewers Dark Cross Key Door N', 'Sewers Dark Cross Key Door S', 'Hyrule Dungeon Armory Interior Key Door N', 'Hyrule Dungeon Armory Interior Key Door S', 'Hyrule Dungeon Map Room Key Door S', 'Hyrule Dungeon North Abyss Key Door N']:
-        set_rule(world.get_entrance(door, player), lambda state: state.has_key('Small Key (Escape)', player, 3))
+#    for door in ['Sewers Key Rat Key Door N', 'Sewers Secret Room Key Door S',
+ #            'Sewers Dark Cross Key Door N', 'Sewers Dark Cross Key Door S', 'Hyrule Dungeon Armory Interior Key Door N', 'Hyrule Dungeon Armory Interior Key Door S', 'Hyrule Dungeon Map Room Key Door S', 'Hyrule Dungeon North Abyss Key Door N']:
+#        set_rule(world.get_entrance(door, player), lambda state: state.has_key('Small Key (Escape)', player, 4))
         
     # Sewers: All sorts of things need lamps
     # TODO: Need to play nice with other complicated lamp rules
@@ -302,8 +302,8 @@ def global_rules(world, player):
     set_rule(world.get_entrance('Eastern Courtyard N', player), lambda state: state.has('Big Key (Eastern Palace)', player))
     # There are two keys and we don't know how we shuffled, so careful with key doors.
     # TODO: Generate key rules in the shuffler. (But make sure this way works first.)
-    for door in ['Eastern Dark Square Key Door WN', 'Eastern Cannonball Ledge Key Door EN', 'Eastern Darkness Up Stairs', 'Eastern Attic Start Down Stairs']:
-        set_rule(world.get_entrance(door, player), lambda state: state.has_key('Small Key (Eastern Palace)', player, 2))
+#    for door in ['Eastern Dark Square Key Door WN', 'Eastern Cannonball Ledge Key Door EN', 'Eastern Darkness Up Stairs', 'Eastern Attic Start Down Stairs']:
+ #       set_rule(world.get_entrance(door, player), lambda state: state.has_key('Small Key (Eastern Palace)', player, 2))
 
     # Boss rules. Same as below but no BK or arrow requirement.
     set_rule(world.get_location('Eastern Palace - Boss', player), lambda state: world.get_location('Eastern Palace - Boss', player).parent_region.dungeon.boss.can_defeat(state))

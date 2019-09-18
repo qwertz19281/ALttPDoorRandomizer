@@ -312,7 +312,7 @@ def create_regions(world, player):
         create_dungeon_region(player, 'Sewers Rope Room', 'A dungeon', None, ['Sewers Rope Room Up Stairs', 'Sewers Rope Room North Stairs']),
         create_dungeon_region(player, 'Sewers Dark Cross', 'A dungeon', ['Sewers - Dark Cross'], ['Sewers Dark Cross Key Door N', 'Sewers Dark Cross South Stairs']),
         create_dungeon_region(player, 'Sewers Water', 'A dungeon', None, ['Sewers Dark Cross Key Door S', 'Sewers Water W']),
-        create_dungeon_region(player, 'Sewers Key Rat', 'A dungeon', None, ['Sewers Key Rat E', 'Sewers Key Rat Key Door N']),
+        create_dungeon_region(player, 'Sewers Key Rat', 'A dungeon', ['Sewers - Rat Key Drop'], ['Sewers Key Rat E', 'Sewers Key Rat Key Door N']),
         create_dungeon_region(player, 'Sewers Secret Room', 'A dungeon', ['Sewers - Secret Room - Left', 'Sewers - Secret Room - Middle', 'Sewers - Secret Room - Right'],
                               ['Sewers Secret Room Key Door S', 'Sewers Secret Room Push Block']),
         create_dungeon_region(player, 'Sewers Secret Room Blocked Path', 'A dungeon', None, ['Sewers Secret Room Up Stairs']),
@@ -462,6 +462,7 @@ default_shop_contents = {
 key_only_locations = {
   'Hyrule Castle - Map Guard Key Drop': 'Small Key (Escape)',
   'Hyrule Castle - Boomerang Guard Key Drop': 'Small Key (Escape)',
+  'Sewers - Rat Key Drop': 'Small Key (Escape)',
   'Eastern Palace - Dark Square Pot Key': 'Small Key (Eastern Palace)',
   'Eastern Palace - Dark Eyegore Key Drop': 'Small Key (Eastern Palace)',
 }

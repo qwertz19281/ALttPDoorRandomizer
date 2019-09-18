@@ -2,9 +2,10 @@ import random
 import collections
 import logging
 
-
+from collections import defaultdict
 from BaseClasses import RegionType, DoorType, Direction, RegionChunk
 from Items import ItemFactory
+from Rules import set_rule
 
 
 def link_doors(world, player):
@@ -19,6 +20,8 @@ def link_doors(world, player):
     for entrance, ext in straight_staircases:
         connect_two_way(world, entrance, ext, player, True)
     for entrance, ext in open_edges:
+        connect_two_way(world, entrance, ext, player, True)
+    for entrance, ext in interior_doors:
         connect_two_way(world, entrance, ext, player, True)
     for exitName, regionName in falldown_pits:
         connect_simple_door(world, exitName, regionName, player)
@@ -144,15 +147,17 @@ def connect_one_way(world, entrancename, exitname, player, skipSpoiler=False):
 def within_dungeon(world, player):
     # TODO: Add dungeon names to Regions so we can just look these lists up
     # TODO: The "starts" regions need access logic
+    small_key_es = 'Small Key (Escape)'
     dungeon_region_starts_es = ['Hyrule Castle Lobby', 'Hyrule Castle West Lobby', 'Hyrule Castle East Lobby', 'Sewers Secret Room']
     dungeon_region_names_es = ['Hyrule Castle Lobby', 'Hyrule Castle West Lobby', 'Hyrule Castle East Lobby', 'Hyrule Castle East Hall', 'Hyrule Castle West Hall', 'Hyrule Castle Back Hall', 'Hyrule Castle Throne Room', 'Hyrule Dungeon Map Room', 'Hyrule Dungeon North Abyss', 'Hyrule Dungeon North Abyss Catwalk', 'Hyrule Dungeon South Abyss', 'Hyrule Dungeon South Abyss Catwalk', 'Hyrule Dungeon Guardroom', 'Hyrule Dungeon Armory Main', 'Hyrule Dungeon Armory North Branch', 'Hyrule Dungeon Staircase', 'Hyrule Dungeon Cellblock', 'Sewers Behind Tapestry', 'Sewers Rope Room', 'Sewers Dark Cross', 'Sewers Water', 'Sewers Key Rat', 'Sewers Secret Room', 'Sewers Secret Room Blocked Path', 'Sewers Pull Switch', 'Sanctuary']
+    small_key_ep = 'Small Key (Eastern Palace)'
     dungeon_region_starts_ep = ['Eastern Lobby']
     dungeon_region_names_ep = ['Eastern Lobby', 'Eastern Cannonball', 'Eastern Cannonball Ledge', 'Eastern Courtyard Ledge', 'Eastern Map Area', 'Eastern Compass Area', 'Eastern Courtyard', 'Eastern Fairies', 'Eastern Map Valley', 'Eastern Dark Square', 'Eastern Big Key', 'Eastern Darkness', 'Eastern Attic Start', 'Eastern Attic Switches', 'Eastern Eyegores',  'Eastern Boss']
-    dungeon_region_lists = [(dungeon_region_starts_es, dungeon_region_names_es), (dungeon_region_starts_ep, dungeon_region_names_ep)]
-    for start_list, region_list in dungeon_region_lists:
-        shuffle_dungeon(world, player, start_list, region_list)
+    dungeon_region_lists = [(dungeon_region_starts_es, dungeon_region_names_es, small_key_es), (dungeon_region_starts_ep, dungeon_region_names_ep, small_key_ep)]
+    for start_list, region_list, small_key in dungeon_region_lists:
+        shuffle_dungeon(world, player, start_list, region_list, small_key)
 
-def shuffle_dungeon(world, player, start_region_names, dungeon_region_names):
+def shuffle_dungeon(world, player, start_region_names, dungeon_region_names, small_key_name):
     logger = logging.getLogger('')
     # Part one - generate a random layout
     available_regions = []
@@ -169,7 +174,7 @@ def shuffle_dungeon(world, player, start_region_names, dungeon_region_names):
     # Add all start regions to the open set.
     available_doors = []
     for name in start_region_names:
-        logger.info("Starting in %s", name)
+        logger.debug("Starting in %s", name)
         for door in get_doors(world, world.get_region(name, player), player):
             ugly_regions[door.name] = 0
             available_doors.append(door)
@@ -181,15 +186,15 @@ def shuffle_dungeon(world, player, start_region_names, dungeon_region_names):
         # into the dungeon), or puts them late in the dungeon (so they probably are part
         # of a loop). Panic if neither of these happens.
         random.shuffle(available_doors)
-        available_doors.sort(key=lambda door: 1 if door.blocked else 2 if door.ugly else 0)
+        available_doors.sort(key=lambda door: 1 if door.blocked else 0 if door.ugly else 2)
         door = available_doors.pop()
-        logger.info('Linking %s', door.name)
+        logger.debug('Linking %s', door.name)
         # Find an available region that has a compatible door
         connect_region, connect_door = find_compatible_door_in_regions(world, door, available_regions, player)
         # Also ignore compatible doors if they're blocked; these should only be used to
         # create loops.
         if connect_region is not None and not door.blocked:
-            logger.info('  Found new region %s via %s', connect_region.name, connect_door.name)
+            logger.debug('  Found new region %s via %s', connect_region.name, connect_door.name)
             # Apply connection and add the new region's doors to the available list
             maybe_connect_two_way(world, door, connect_door, player)
             # Figure out the new room's ugliness region
@@ -204,7 +209,7 @@ def shuffle_dungeon(world, player, start_region_names, dungeon_region_names):
                 # If an ugly door is anything but the connect door, panic and die
                 if door != connect_door and door.ugly:
                     logger.info('Failed because of ugly door, trying again.')
-                    shuffle_dungeon(world, player, start_region_names, dungeon_region_names)
+                    shuffle_dungeon(world, player, start_region_names, dungeon_region_names, small_key_name)
                     return
                     
             # We've used this region and door, so don't use them again
@@ -216,18 +221,98 @@ def shuffle_dungeon(world, player, start_region_names, dungeon_region_names):
             # If we don't have a door at this point, it's time to panic and retry.
             if connect_door is None:
                 logger.info('Failed because of blocked door, trying again.')
-                shuffle_dungeon(world, player, start_region_names, dungeon_region_names)
+                shuffle_dungeon(world, player, start_region_names, dungeon_region_names, small_key_name)
                 return                
-            logger.info('  Adding loop via %s', connect_door.name)
+            logger.debug('  Adding loop via %s', connect_door.name)
             maybe_connect_two_way(world, door, connect_door, player)
             available_doors.remove(connect_door)
     # Check that we used everything, and retry if we failed
     if len(available_regions) > 0 or len(available_doors) > 0:
         logger.info('Failed to add all regions to dungeon, trying again.')
-        shuffle_dungeon(world, player, start_region_names, dungeon_region_names)
+        shuffle_dungeon(world, player, start_region_names, dungeon_region_names, small_key_name)
         return
     
-    
+    # Now that the dungeon layout is done, we need to search again to generate key logic.
+    # TODO: This assumes all start doors are accessible, which isn't always true.
+    # TODO: This can generate solvable-but-really-annoying layouts due to one ways.
+    available_doors = []  # Doors to explore
+    visited_regions = set()  # Regions we've been to and don't need to expand
+    current_kr = 0  # Key regions are numbered, starting at 0
+    door_krs = {}  # Map of key door name to KR it lives in
+    kr_parents = {}  # Key region to parent map
+    kr_location_counts = defaultdict(int)  # Number of locations in each key region
+    # Everything in a start region is in key region 0.
+    for name in start_region_names:
+        region = world.get_region(name, player)
+        visited_regions.add(name)
+        kr_location_counts[current_kr] += len(region.locations)
+        for door in get_doors(world, region, player):
+            if not door.blocked:
+                available_doors.append(door)
+                door_krs[door.name] = current_kr
+    # Search into the dungeon
+    logger.info('Begin key region search.')
+    while len(available_doors) > 0:
+        # Open as many non-key doors as possible before opening a key door.
+        # This guarantees that we're only exploring one key region at a time.
+        available_doors.sort(key=lambda door: 0 if door.smallKey else 1)
+        door = available_doors.pop()
+        # Bail early if we've been here before or the door is blocked
+        local_kr = door_krs[door.name]
+        logger.debug('  kr %s: Door %s', local_kr, door.name)
+        exit = world.get_entrance(door.name, player).connected_region
+        if door.blocked or exit.name in visited_regions:
+            continue
+        # Once we open a key door, we need a new region.
+        if door.smallKey:
+            current_kr += 1
+            kr_parents[current_kr] = local_kr
+            local_kr = current_kr
+            logger.debug('    New KR %s', current_kr)
+        # Account for the new region
+        visited_regions.add(exit.name)
+        kr_location_counts[local_kr] += len(exit.locations)
+        for new_door in get_doors(world, exit, player):
+            available_doors.append(new_door)
+            door_krs[new_door.name] = local_kr
+    # Now that we have doors divided up into key regions, we can analyze the map
+    # Invert the door -> kr map into one that lists doors by region.
+    kr_doors = defaultdict(list)
+    region_krs = {}
+    for door_name in door_krs:
+        kr = door_krs[door_name]
+        exit = world.get_entrance(door_name, player);
+        door = world.check_for_door(door_name, player)
+        region_krs[exit.parent_region.name] = kr
+        if door.smallKey and not door.blocked:
+            kr_doors[kr].append(exit)
+    kr_keys = defaultdict(int)  # Number of keys each region needs
+    for kr in range(0, current_kr + 1):
+        logic_doors = []
+        keys = 0
+        for door in kr_doors[kr]:
+            dest_kr = region_krs[door.connected_region.name]
+            if dest_kr > kr:
+                # This door heads deeper into the dungeon. It needs a full key, and logic
+                keys += 1
+                logic_doors.append(door)
+            elif dest_kr == kr:
+                # This door doesn't get us any deeper, but it's possible to waste a key.
+                # We're going to see its sibling in this search, so add half a key
+                keys += 0.5
+        # Subtract keys from available keys
+        # TODO: Track whether there are enough locations to satisfy key rules, and panic
+        # if not. That is, this but recursive:
+        # kr_location_counts[kr] -= keys
+        # Add key count from parent region
+        if kr in kr_parents:
+            keys += kr_keys[kr_parents[kr]]
+        kr_keys[kr] = keys
+        # Generate logic
+        for door in logic_doors:
+            logger.info('  %s in kr %s needs %s keys', door.name, kr, keys)   
+            set_rule(world.get_entrance(door.name, player), lambda state: state.has_key(small_key_name, player, keys))
+     
 
 # Connects a and b. Or don't if they're an unsupported connection type.
 # TODO: This is gross, don't do it this way
