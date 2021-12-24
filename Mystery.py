@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--create_spoiler', action='store_true')
     parser.add_argument('--rom')
     parser.add_argument('--enemizercli')
+    parser.add_argument('--entranceoverride')
     parser.add_argument('--outputpath')
     parser.add_argument('--loglevel', default='info', choices=['debug', 'info', 'warning', 'error', 'critical'])
     for player in range(1, multiargs.multi + 1):
@@ -70,6 +71,8 @@ def main():
         erargs.rom = args.rom
     if args.enemizercli:
         erargs.enemizercli = args.enemizercli
+    if args.entranceoverride:
+        erargs.entranceoverride = args.entranceoverride
 
     settings_cache = {k: (roll_settings(v) if args.samesettings else None) for k, v in weights_cache.items()}
 

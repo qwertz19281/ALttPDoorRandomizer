@@ -340,6 +340,9 @@
   "enemizercli": {
     "setting": "enemizercli"
   },
+  "entranceoverride": {
+    "setting": "entranceoverride"
+  },
   "shufflebosses": {
     "choices": [
       "none",

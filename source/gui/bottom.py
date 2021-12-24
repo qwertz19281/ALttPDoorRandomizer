@@ -214,6 +214,9 @@ def create_guiargs(parent):
     # Get EnemizerCLI setting
     guiargs.enemizercli = parent.pages["randomizer"].pages["enemizer"].widgets["enemizercli"].storageVar.get()
 
+    # Get entranceoverride setting
+    guiargs.entranceoverride = parent.pages["randomizer"].pages["entrance"].widgets["entranceoverride"].storageVar.get()
+
     # Get Multiworld Worlds count
     guiargs.multi = int(parent.pages["bottom"].pages["content"].widgets["worlds"].storageVar.get())
 

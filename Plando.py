@@ -23,7 +23,7 @@ def main(args):
     start_time = time.process_time()
 
     # initialize the world
-    world = World(1, 'vanilla', 'noglitches', 'standard', 'normal', 'none', 'on', 'ganon', 'freshness', False, False, False, False, False, False, None, False)
+    world = World(1, 'vanilla', 'noglitches', 'standard', 'normal', 'none', 'on', 'ganon', 'freshness', False, False, False, False, False, False, None, False, '')
     world.player_names[1].append("Player 1")
     logger = logging.getLogger('')
 

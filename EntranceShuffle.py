@@ -330,6 +330,86 @@ def link_entrances(world, player):
             dw_entrances.append('Ganons Tower')
             caves.append('Ganons Tower Exit')
 
+        if world.entranceoverride:
+            print(f"entrance override: {world.entranceoverride}")
+
+            override_entrances = []
+
+            for h in world.entranceoverride.split(";"):
+                w = h.split(",")
+                assert len(w) == 2, "invalid set"
+                override_entrances += [[w[0].strip(),w[1].strip()]]
+
+            print(f"entrance override: {override_entrances}")
+            
+            for entrance, exid in override_entrances:
+                try:
+                    blacksmith_doors.remove(entrance)
+                except ValueError:
+                    pass
+                try:
+                    bomb_shop_doors.remove(entrance)
+                except ValueError:
+                    pass
+                try:
+                    old_man_entrances.remove(entrance) 
+                except ValueError:
+                    pass
+                try:
+                    old_man_house.remove(entrance)
+                except ValueError:
+                    pass
+
+                if entrance in lw_entrances:
+                    print(f"entrance override: remove entrance {entrance} from lw_entrances")
+                    lw_entrances.remove(entrance)
+                elif entrance in dw_entrances:
+                    print(f"entrance override: remove entrance {entrance} from dw_entrances")
+                    dw_entrances.remove(entrance)
+                elif entrance in lw_must_exits:
+                    print(f"entrance override: remove entrance {entrance} from lw_must_exits")
+                    print("WARN override on mustexit")
+                    lw_must_exits.remove(entrance)
+                elif entrance in dw_must_exits:
+                    print(f"entrance override: remove entrance {entrance} from dw_must_exits")
+                    print("WARN override on mustexit")
+                    dw_must_exits.remove(entrance)
+                else:
+                    raise NotImplementedError("Entrance Override: invalid entrance specified")
+
+                if exid in caves:
+                    print(f"entrance override: remove exit {exid} from caves and connect to entrance {entrance}")
+                    caves.remove(exid)
+                    connect_two_way(world, entrance, exid, player)
+                elif exid in door_targets:
+                    print(f"entrance override: remove exit {exid} from door_targets and connect to entrance {entrance}")
+                    door_targets.remove(exid)
+                    connect_entrance(world, entrance, exid, player)
+                else:
+                    assoced = False
+
+                    for i,cave_set in enumerate(caves):
+                        if isinstance(cave_set, tuple):
+                            if exid in cave_set:
+                                assert not assoced
+                                print(f"entrance override: remove exit {exid} from cave_set and connect to entrance {entrance}")
+                                print(caves[i])
+                                if len(cave_set) > 1:
+                                    caves[i] = tuple(x for x in cave_set if x != exid)
+                                    print(caves[i])
+                                else:
+                                    caves.pop(i)
+                                    print("Removed from empty tuple")
+                                connect_two_way(world, entrance, exid, player)
+                                assoced = True
+                        else:
+                            assert isinstance(cave_set, str)
+
+                    if not assoced:
+                        raise NotImplementedError("Entrance Override: invalid exit specified")
+        else:
+            print("entrance override disabled")
+
         # place links house
         if world.mode[player] == 'standard' or not world.shufflelinks[player]:
             links_house = 'Links House'

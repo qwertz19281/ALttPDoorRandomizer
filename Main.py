@@ -63,7 +63,7 @@ def main(args, seed=None, fish=None):
                 Settings.adjust_args_from_code(code, player, args)
     world = World(args.multi, args.shuffle, args.door_shuffle, args.logic, args.mode, args.swords,
                   args.difficulty, args.item_functionality, args.timer, args.progressive, args.goal, args.algorithm,
-                  args.accessibility, args.shuffleganon, args.retro, args.custom, args.customitemarray, args.hints)
+                  args.accessibility, args.shuffleganon, args.retro, args.custom, args.customitemarray, args.hints, args.entranceoverride)
     logger = logging.getLogger('')
     if seed is None:
         random.seed(None)
@@ -359,7 +359,7 @@ def copy_world(world):
     # ToDo: Not good yet
     ret = World(world.players, world.shuffle, world.doorShuffle, world.logic, world.mode, world.swords,
                 world.difficulty, world.difficulty_adjustments, world.timer, world.progressive, world.goal, world.algorithm,
-                world.accessibility, world.shuffle_ganon, world.retro, world.custom, world.customitemarray, world.hints)
+                world.accessibility, world.shuffle_ganon, world.retro, world.custom, world.customitemarray, world.hints, world.entranceoverride)
     ret.teams = world.teams
     ret.player_names = copy.deepcopy(world.player_names)
     ret.remote_items = world.remote_items.copy()

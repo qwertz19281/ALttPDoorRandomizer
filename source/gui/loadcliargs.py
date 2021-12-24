@@ -84,6 +84,17 @@ def loadcliargs(gui, args, settings=None):
         label = fish.translate("gui","gui",mainpage + '.' + subpage + '.' + widget + ".online")
         gui.pages[mainpage].pages[subpage].widgets[widget].pieces["online"].label.configure(text=label)
 
+        # Get entranceoverride setting
+        mainpage = "randomizer"
+        subpage = "entrance"
+        widget = "entranceoverride"
+        setting = "entranceoverride"
+        # set storagevar
+        gui.pages[mainpage].pages[subpage].widgets[widget].storageVar.set(args[setting])
+        # set textbox/frame label
+        label = fish.translate("gui","gui",mainpage + '.' + subpage + '.' + widget)
+        gui.pages[mainpage].pages[subpage].widgets[widget].pieces["frame"].label.configure(text=label)
+
         # Get baserom path
         mainpage = "randomizer"
         subpage = "generation"

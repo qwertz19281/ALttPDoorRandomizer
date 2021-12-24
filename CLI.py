@@ -154,6 +154,7 @@ def parse_settings():
         "enemy_damage": "default",
         "enemy_health": "default",
         "enemizercli": os.path.join(".", "EnemizerCLI", "EnemizerCLI.Core"),
+        "entranceoverride": "",
 
         "shopsanity": False,
         "keydropshuffle": False,

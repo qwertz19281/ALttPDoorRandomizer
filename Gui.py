@@ -130,7 +130,7 @@ def guiMain(args=None):
     self.pages["randomizer"].notebook.add(self.pages["randomizer"].pages["item"], text="Items")
 
     # Entrance Randomizer
-    self.pages["randomizer"].pages["entrance"] = entrando_page(self.pages["randomizer"].notebook)
+    self.pages["randomizer"].pages["entrance"] = entrando_page(self.pages["randomizer"].notebook,self.settings)
     self.pages["randomizer"].notebook.add(self.pages["randomizer"].pages["entrance"], text="Entrances")
 
     # Enemizer

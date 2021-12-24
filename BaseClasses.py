@@ -20,7 +20,7 @@ from RoomData import Room
 class World(object):
 
     def __init__(self, players, shuffle, doorShuffle, logic, mode, swords, difficulty, difficulty_adjustments,
-                 timer, progressive, goal, algorithm, accessibility, shuffle_ganon, retro, custom, customitemarray, hints):
+                 timer, progressive, goal, algorithm, accessibility, shuffle_ganon, retro, custom, customitemarray, hints, entranceoverride):
         self.players = players
         self.teams = 1
         self.shuffle = shuffle.copy()
@@ -61,6 +61,7 @@ class World(object):
         self.fix_trock_exit = {}
         self.shuffle_ganon = shuffle_ganon
         self.fix_gtower_exit = self.shuffle_ganon
+        self.entranceoverride = entranceoverride
         self.retro = retro.copy()
         self.custom = custom
         self.customitemarray = customitemarray
