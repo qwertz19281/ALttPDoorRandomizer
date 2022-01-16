@@ -17,6 +17,7 @@ from Utils import int16_as_bytes
 from Tables import normal_offset_table, spiral_offset_table, multiply_lookup, divisor_lookup
 from RoomData import Room
 
+
 class World(object):
 
     def __init__(self, players, shuffle, doorShuffle, logic, mode, swords, difficulty, difficulty_adjustments,
@@ -117,6 +118,7 @@ class World(object):
             set_player_attr('compassshuffle', False)
             set_player_attr('keyshuffle', False)
             set_player_attr('bigkeyshuffle', False)
+            set_player_attr('restrict_boss_items', 'none')
             set_player_attr('bombbag', False)
             set_player_attr('difficulty_requirements', None)
             set_player_attr('boss_shuffle', 'none')
@@ -215,6 +217,11 @@ class World(object):
                         self._location_cache[(location, player)] = r_location
                         return r_location
         raise RuntimeError('No such location %s for player %d' % (location, player))
+
+    def get_location_unsafe(self, location, player):
+        if (location, player) in self._location_cache:
+            return self._location_cache[(location, player)]
+        return None
 
     def get_dungeon(self, dungeonname, player):
         if isinstance(dungeonname, Dungeon):
@@ -328,7 +335,7 @@ class World(object):
             elif item.name.startswith('Bottle'):
                 if ret.bottle_count(item.player) < self.difficulty_requirements[item.player].progressive_bottle_limit:
                     ret.prog_items[item.name, item.player] += 1
-            elif item.advancement or item.smallkey or item.bigkey:
+            elif item.advancement or item.smallkey or item.bigkey or item.compass or item.map:
                 ret.prog_items[item.name, item.player] += 1
 
         for item in self.itempool:
@@ -343,6 +350,8 @@ class World(object):
                         key_list += [dungeon.big_key.name]
                     if len(dungeon.small_keys) > 0:
                         key_list += [x.name for x in dungeon.small_keys]
+                    # map/compass may be required now
+                    key_list += [x.name for x in dungeon.dungeon_items]
                 from Items import ItemFactory
                 for item in ItemFactory(key_list, p):
                     soft_collect(item)
@@ -853,7 +862,7 @@ class CollectionState(object):
         reduced = Counter()
         for item, cnt in self.prog_items.items():
             item_name, item_player = item
-            if item_player == player and self.check_if_progressive(item_name):
+            if item_player == player and self.check_if_progressive(item_name, player):
                 if item_name.startswith('Bottle'):  # I think magic requirements can require multiple bottles
                     bottle_count += cnt
                 elif item_name in ['Boss Heart Container', 'Sanctuary Heart Container', 'Piece of Heart']:
@@ -869,8 +878,7 @@ class CollectionState(object):
             reduced[('Heart Container', player)] = 1
         return frozenset(reduced.items())
 
-    @staticmethod
-    def check_if_progressive(item_name):
+    def check_if_progressive(self, item_name, player):
         return (item_name in
                 ['Bow', 'Progressive Bow', 'Progressive Bow (Alt)', 'Book of Mudora', 'Hammer', 'Hookshot',
                  'Magic Mirror', 'Ocarina', 'Pegasus Boots', 'Power Glove', 'Cape', 'Mushroom', 'Shovel',
@@ -882,7 +890,8 @@ class CollectionState(object):
                  'Mirror Shield', 'Progressive Shield', 'Bug Catching Net', 'Cane of Byrna',
                  'Boss Heart Container', 'Sanctuary Heart Container', 'Piece of Heart', 'Magic Upgrade (1/2)',
                  'Magic Upgrade (1/4)']
-            or item_name.startswith(('Bottle', 'Small Key', 'Big Key')))
+            or item_name.startswith(('Bottle', 'Small Key', 'Big Key'))
+            or (self.world.restrict_boss_items[player] != 'none' and item_name.startswith(('Map', 'Compass'))))
 
     def can_reach(self, spot, resolution_hint=None, player=None):
         try:
@@ -1460,6 +1469,10 @@ class Dungeon(object):
         return self.world.get_name_string_for_object(self) if self.world else f'{self.name} (Player {self.player})'
 
 
+class FillError(RuntimeError):
+    pass
+
+
 @unique
 class DoorType(Enum):
     Normal = 1
@@ -1851,6 +1864,8 @@ class Sector(object):
         self.destination_entrance = False
         self.equations = None
         self.item_logic = set()
+        self.chest_location_set = set()
+
 
     def region_set(self):
         if self.r_name_set is None:
@@ -1959,6 +1974,12 @@ class Portal(object):
         self.dependent = None
         self.deadEnd = False
         self.light_world = False
+        self.chosen = False
+
+    def find_portal_entrance(self):
+        p_region = self.door.entrance.connected_region
+        return next((x for x in p_region.entrances
+                     if x.parent_region.type in [RegionType.LightWorld, RegionType.DarkWorld]), None)
 
     def change_boss_exit(self, exit_idx):
         self.default = False
@@ -2093,6 +2114,7 @@ class Location(object):
         self.recursion_count = 0
         self.staleness_count = 0
         self.locked = False
+        self.real = not crystal
         self.always_allow = lambda item, state: False
         self.access_rule = lambda state: True
         self.item_rule = lambda item: True
@@ -2187,6 +2209,12 @@ class Item(object):
         if item_dungeon == 'Escape':
             item_dungeon = 'Hyrule Castle'
         return item_dungeon
+
+    def is_inside_dungeon_item(self, world):
+        return ((self.smallkey and not world.keyshuffle[self.player])
+                or (self.bigkey and not world.bigkeyshuffle[self.player])
+                or (self.compass and not world.compassshuffle[self.player])
+                or (self.map and not world.mapshuffle[self.player]))
 
     def __str__(self):
         return str(self.__unicode__())
@@ -2417,6 +2445,7 @@ class Spoiler(object):
                          'ganon_crystals': self.world.crystals_needed_for_ganon,
                          'open_pyramid': self.world.open_pyramid,
                          'accessibility': self.world.accessibility,
+                         'restricted_boss_items': self.world.restrict_boss_items,
                          'hints': self.world.hints,
                          'mapshuffle': self.world.mapshuffle,
                          'compassshuffle': self.world.compassshuffle,
@@ -2432,6 +2461,7 @@ class Spoiler(object):
                          'experimental': self.world.experimental,
                          'keydropshuffle': self.world.keydropshuffle,
                          'shopsanity': self.world.shopsanity,
+                         'pseudoboots': self.world.pseudoboots,
 						 'triforcegoal': self.world.treasure_hunt_count,
 						 'triforcepool': self.world.treasure_hunt_total,
                          'code': {p: Settings.make_code(self.world, p) for p in range(1, self.world.players + 1)}
@@ -2460,6 +2490,9 @@ class Spoiler(object):
         return json.dumps(out)
 
     def to_file(self, filename):
+        def yn(flag):
+            return 'Yes' if flag else 'No'
+
         self.parse_data()
         with open(filename, 'w') as outfile:
             outfile.write('ALttP Entrance Randomizer Version %s  -  Seed: %s\n\n' % (self.metadata['version'], self.world.seed))
@@ -2484,7 +2517,7 @@ class Spoiler(object):
                 outfile.write('Difficulty:                      %s\n' % self.metadata['item_pool'][player])
                 outfile.write('Item Functionality:              %s\n' % self.metadata['item_functionality'][player])
                 outfile.write('Entrance Shuffle:                %s\n' % self.metadata['shuffle'][player])
-                outfile.write(f"Link's House Shuffled:           {'Yes' if self.metadata['shufflelinks'][player] else 'No'}\n")
+                outfile.write(f"Link's House Shuffled:           {yn(self.metadata['shufflelinks'])}\n")
                 outfile.write('Door Shuffle:                    %s\n' % self.metadata['door_shuffle'][player])
                 outfile.write('Intensity:                       %s\n' % self.metadata['intensity'][player])
                 addition = ' (Random)' if self.world.crystals_gt_orig[player] == 'random' else ''
@@ -2493,6 +2526,7 @@ class Spoiler(object):
                 outfile.write('Crystals required for Ganon:     %s\n' % (str(self.metadata['ganon_crystals'][player]) + addition))
                 outfile.write('Pyramid hole pre-opened:         %s\n' % ('Yes' if self.metadata['open_pyramid'][player] else 'No'))
                 outfile.write('Accessibility:                   %s\n' % self.metadata['accessibility'][player])
+                outfile.write(f"Restricted Boss Items:           {self.metadata['restricted_boss_items'][player]}\n")
                 outfile.write('Map shuffle:                     %s\n' % ('Yes' if self.metadata['mapshuffle'][player] else 'No'))
                 outfile.write('Compass shuffle:                 %s\n' % ('Yes' if self.metadata['compassshuffle'][player] else 'No'))
                 outfile.write('Small Key shuffle:               %s\n' % ('Yes' if self.metadata['keyshuffle'][player] else 'No'))
@@ -2501,12 +2535,13 @@ class Spoiler(object):
                 outfile.write('Enemy shuffle:                   %s\n' % self.metadata['enemy_shuffle'][player])
                 outfile.write('Enemy health:                    %s\n' % self.metadata['enemy_health'][player])
                 outfile.write('Enemy damage:                    %s\n' % self.metadata['enemy_damage'][player])
-                outfile.write('Pot shuffle:                     %s\n' % ('Yes' if self.metadata['potshuffle'][player] else 'No'))
-                outfile.write('Hints:                           %s\n' % ('Yes' if self.metadata['hints'][player] else 'No'))
-                outfile.write('Experimental:                    %s\n' % ('Yes' if self.metadata['experimental'][player] else 'No'))
-                outfile.write('Key Drops shuffled:              %s\n' % ('Yes' if self.metadata['keydropshuffle'][player] else 'No'))
-                outfile.write(f"Shopsanity:                      {'Yes' if self.metadata['shopsanity'][player] else 'No'}\n")
-                outfile.write('Bombbag:                         %s\n' % ('Yes' if self.metadata['bombbag'][player] else 'No'))
+                outfile.write(f"Pot shuffle:                     {yn(self.metadata['potshuffle'][player])}\n")
+                outfile.write(f"Hints:                           {yn(self.metadata['hints'][player])}\n")
+                outfile.write(f"Experimental:                    {yn(self.metadata['experimental'][player])}\n")
+                outfile.write(f"Key Drops shuffled:              {yn(self.metadata['keydropshuffle'][player])}\n")
+                outfile.write(f"Shopsanity:                      {yn(self.metadata['shopsanity'][player])}\n")
+                outfile.write(f"Bombbag:                         {yn(self.metadata['bombbag'][player])}\n")
+                outfile.write(f"Pseudoboots:                     {yn(self.metadata['pseudoboots'][player])}\n")
             if self.doors:
                 outfile.write('\n\nDoors:\n\n')
                 outfile.write('\n'.join(
@@ -2691,6 +2726,16 @@ enemy_mode = {"none": 0, "shuffled": 1, "random": 2, "chaos": 2, "legacy": 3}
 e_health = {"default": 0, "easy": 1, "normal": 2, "hard": 3, "expert": 4}
 e_dmg = {"default": 0, "shuffled": 1, "random": 2}
 
+# byte 8: RRAA A??? (restrict boss mode, algorithm, ? = unused)
+rb_mode = {"none": 0, "mapcompass": 1, "dungeon": 2}
+# algorithm: todo with "biased shuffles"
+algo_mode = {"balanced": 0, "equitable": 1, "vanilla_fill": 2, "dungeon_only": 3, "district": 4}
+
+# additions
+# psuedoboots does not effect code
+# sfx_shuffle and other adjust items does not effect settings code
+
+
 class Settings(object):
 
     @staticmethod
@@ -2719,7 +2764,9 @@ class Settings(object):
             | (boss_mode[w.boss_shuffle[p]] << 2) | (enemy_mode[w.enemy_shuffle[p]]),
 
             (e_health[w.enemy_health[p]] << 5) | (e_dmg[w.enemy_damage[p]] << 3) | (0x4 if w.potshuffle[p] else 0)
-            | (0x2 if w.bombbag[p] else 0) | (1 if w.shufflelinks[p] else 0)])
+            | (0x2 if w.bombbag[p] else 0) | (1 if w.shufflelinks[p] else 0),
+
+            (rb_mode[w.restrict_boss_items[p]] << 6)])
         return base64.b64encode(code, "+-".encode()).decode()
 
     @staticmethod
@@ -2765,6 +2812,8 @@ class Settings(object):
         args.shufflepots[p] = True if settings[7] & 0x4 else False
         args.bombbag[p] = True if settings[7] & 0x2 else False
         args.shufflelinks[p] = True if settings[7] & 0x1 else False
+        if len(settings) > 8:
+            args.restrict_boss_items[p] = True if r(rb_mode)[(settings[8] & 0x80) >> 6] else False
 
 
 class KeyRuleType(FastEnum):

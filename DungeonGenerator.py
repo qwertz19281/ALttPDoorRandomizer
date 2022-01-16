@@ -218,7 +218,8 @@ def gen_dungeon_info(name, available_sectors, entrance_regions, all_regions, pro
         return name == 'Skull Woods 2' and d.name == 'Skull Pinball WS'
     original_state = extend_reachable_state_improved(entrance_regions, start, proposed_map, all_regions,
                                                      valid_doors, bk_flag, world, player, exception)
-    dungeon['Origin'] = create_graph_piece_from_state(None, original_state, original_state, proposed_map, exception)
+    dungeon['Origin'] = create_graph_piece_from_state(None, original_state, original_state, proposed_map, exception,
+                                                      world, player)
     either_crystal = True  # if all hooks from the origin are either, explore all bits with either
     for hook, crystal in dungeon['Origin'].hooks.items():
         if crystal != CrystalBarrier.Either:
@@ -239,7 +240,7 @@ def gen_dungeon_info(name, available_sectors, entrance_regions, all_regions, pro
                 o_state = extend_reachable_state_improved([parent], init_state, proposed_map, all_regions,
                                                           valid_doors, bk_flag, world, player, exception)
                 o_state_cache[door.name] = o_state
-                piece = create_graph_piece_from_state(door, o_state, o_state, proposed_map, exception)
+                piece = create_graph_piece_from_state(door, o_state, o_state, proposed_map, exception, world, player)
                 dungeon[door.name] = piece
     check_blue_states(hanger_set, dungeon, o_state_cache, proposed_map, all_regions, valid_doors,
                       group_flags, door_map, world, player, exception)
@@ -339,7 +340,7 @@ def explore_blue_state(door, dungeon, o_state, proposed_map, all_regions, valid_
     blue_start.big_key_special = o_state.big_key_special
     b_state = extend_reachable_state_improved([parent], blue_start, proposed_map, all_regions, valid_doors, bk_flag,
                                               world, player, exception)
-    dungeon[door.name] = create_graph_piece_from_state(door, o_state, b_state, proposed_map, exception)
+    dungeon[door.name] = create_graph_piece_from_state(door, o_state, b_state, proposed_map, exception, world, player)
 
 
 def make_a_choice(dungeon, hangers, avail_hooks, prev_choices, name):
@@ -603,7 +604,7 @@ def winnow_hangers(hangers, hooks):
         hangers[hanger].remove(door)
 
 
-def create_graph_piece_from_state(door, o_state, b_state, proposed_map, exception):
+def create_graph_piece_from_state(door, o_state, b_state, proposed_map, exception, world, player):
     # todo: info about dungeon events - not sure about that
     graph_piece = GraphPiece()
     all_unattached = {}
@@ -635,16 +636,15 @@ def create_graph_piece_from_state(door, o_state, b_state, proposed_map, exceptio
     graph_piece.visited_regions.update(o_state.visited_orange)
     graph_piece.visited_regions.update(b_state.visited_blue)
     graph_piece.visited_regions.update(b_state.visited_orange)
-    graph_piece.possible_bk_locations.update(filter_for_potential_bk_locations(o_state.bk_found))
-    graph_piece.possible_bk_locations.update(filter_for_potential_bk_locations(b_state.bk_found))
+    graph_piece.possible_bk_locations.update(filter_for_potential_bk_locations(o_state.bk_found, world, player))
+    graph_piece.possible_bk_locations.update(filter_for_potential_bk_locations(b_state.bk_found, world, player))
     graph_piece.pinball_used = o_state.pinball_used or b_state.pinball_used
     return graph_piece
 
 
-def filter_for_potential_bk_locations(locations):
-    return [x for x in locations if
-            '- Big Chest' not in x.name and '- Prize' not in x.name and x.name not in dungeon_events
-            and  not x.forced_item and x.name not in ['Agahnim 1', 'Agahnim 2']]
+def filter_for_potential_bk_locations(locations, world, player):
+    return [x for x in locations if '- Big Chest' not in x.name and not reserved_location(x, world, player) and
+            not x.forced_item and not prize_or_event(x) and not blind_boss_unavail(x, locations, world, player)]
 
 
 type_map = {
@@ -987,12 +987,8 @@ class ExplorationState(object):
             return self.crystal == CrystalBarrier.Either or door.crystal == self.crystal
         return True
 
-    def count_locations_exclude_specials(self):
-        cnt = 0
-        for loc in self.found_locations:
-            if '- Big Chest' not in loc.name and '- Prize' not in loc.name and loc.name not in dungeon_events and not loc.forced_item:
-                cnt += 1
-        return cnt
+    def count_locations_exclude_specials(self, world, player):
+        return count_locations_exclude_big_chest(self.found_locations, world, player)
 
     def validate(self, door, region, world, player):
         return self.can_traverse(door) and not self.visited(region) and valid_region_to_explore(region, self.dungeon,
@@ -1033,6 +1029,32 @@ class ExplorationState(object):
         return 2
 
 
+def count_locations_exclude_big_chest(locations, world, player):
+    cnt = 0
+    for loc in locations:
+        if ('- Big Chest' not in loc.name and not loc.forced_item and not reserved_location(loc, world, player)
+           and not prize_or_event(loc) and not blind_boss_unavail(loc, locations, world, player)):
+            cnt += 1
+    return cnt
+
+
+def prize_or_event(loc):
+    return loc.name in dungeon_events or '- Prize' in loc.name or loc.name in ['Agahnim 1', 'Agahnim 2']
+
+
+def reserved_location(loc, world, player):
+    return hasattr(world, 'item_pool_config') and loc.name in world.item_pool_config.reserved_locations[player]
+
+
+def blind_boss_unavail(loc, locations, world, player):
+    if loc.name == "Thieves' Town - Boss":
+        return (loc.parent_region.dungeon.boss.name == 'Blind' and
+                (not any(x for x in locations if x.name == 'Suspicious Maiden') or
+                 (world.get_region('Thieves Attic Window', player).dungeon.name == 'Thieves Town' and
+                  not any(x for x in locations if x.name == 'Attic Cracked Floor'))))
+    return False
+
+
 class ExplorableDoor(object):
 
     def __init__(self, door, crystal, flag):
@@ -1056,7 +1078,8 @@ def extend_reachable_state_improved(search_regions, state, proposed_map, all_reg
         explorable_door = local_state.next_avail_door()
         if explorable_door.door.bigKey:
             if bk_flag:
-                big_not_found = not special_big_key_found(local_state) if local_state.big_key_special else local_state.count_locations_exclude_specials() == 0
+                big_not_found = (not special_big_key_found(local_state) if local_state.big_key_special
+                                 else local_state.count_locations_exclude_specials(world, player) == 0)
                 if big_not_found:
                     continue  # we can't open this door
         if explorable_door.door in proposed_map:
@@ -1139,6 +1162,8 @@ class DungeonBuilder(object):
         self.sectors = []
         self.location_cnt = 0
         self.key_drop_cnt = 0
+        self.dungeon_items = None  # during fill how many dungeon items are left
+        self.free_items = None  # during fill how many dungeon items are left
         self.bk_required = False
         self.bk_provided = False
         self.c_switch_required = False
@@ -1301,7 +1326,7 @@ def create_dungeon_builders(all_sectors, connections_tuple, world, player,
                 polarized_sectors[sector] = None
         if bow_sectors:
             assign_bow_sectors(dungeon_map, bow_sectors, global_pole)
-        assign_location_sectors(dungeon_map, free_location_sectors, global_pole)
+        assign_location_sectors(dungeon_map, free_location_sectors, global_pole, world, player)
         leftover = assign_crystal_switch_sectors(dungeon_map, crystal_switches, crystal_barriers, global_pole)
         ensure_crystal_switches_reachable(dungeon_map, leftover, polarized_sectors, crystal_barriers, global_pole)
         for sector in leftover:
@@ -1452,6 +1477,7 @@ def define_sector_features(sectors):
                     sector.bk_provided = True
                 elif loc.name not in dungeon_events and not loc.forced_item:
                     sector.chest_locations += 1
+                    sector.chest_location_set.add(loc.name)
                     if '- Big Chest' in loc.name or loc.name in ["Hyrule Castle - Zelda's Chest",
                                                                  "Thieves' Town - Blind's Cell"]:
                         sector.bk_required = True
@@ -1532,19 +1558,26 @@ def assign_bow_sectors(dungeon_map, bow_sectors, global_pole):
         assign_sector(sector_list[i], builder, bow_sectors, global_pole)
 
 
-def assign_location_sectors(dungeon_map, free_location_sectors, global_pole):
+def assign_location_sectors(dungeon_map, free_location_sectors, global_pole, world, player):
     valid = False
     choices = None
     sector_list = list(free_location_sectors)
     random.shuffle(sector_list)
+    orig_location_set = build_orig_location_set(dungeon_map)
+    num_dungeon_items = requested_dungeon_items(world, player)
     while not valid:
         choices, d_idx, totals = weighted_random_locations(dungeon_map, sector_list)
+        location_set = {x: set(y) for x, y in orig_location_set.items()}
         for i, sector in enumerate(sector_list):
-            choice = d_idx[choices[i].name]
+            d_name = choices[i].name
+            choice = d_idx[d_name]
             totals[choice] += sector.chest_locations
+            location_set[d_name].update(sector.chest_location_set)
         valid = True
         for d_name, idx in d_idx.items():
-            if totals[idx] < 5:  # min locations for dungeons is 5 (bk exception)
+            free_items = count_reserved_locations(world, player, location_set[d_name])
+            target = max(free_items, 2) + num_dungeon_items
+            if totals[idx] < target:
                 valid = False
                 break
     for i, choice in enumerate(choices):
@@ -1573,6 +1606,30 @@ def weighted_random_locations(dungeon_map, free_location_sectors):
 
     choices = random.choices(population, weights, k=len(free_location_sectors))
     return choices, d_idx, totals
+
+
+def build_orig_location_set(dungeon_map):
+    orig_locations = {}
+    for name, builder in dungeon_map.items():
+        orig_locations[name] = set().union(*(s.chest_location_set for s in builder.sectors))
+    return orig_locations
+
+
+def requested_dungeon_items(world, player):
+    num = 0
+    if not world.bigkeyshuffle[player]:
+        num += 1
+    if not world.compassshuffle[player]:
+        num += 1
+    if not world.mapshuffle[player]:
+        num += 1
+    return num
+
+
+def count_reserved_locations(world, player, proposed_set):
+    if world.item_pool_config:
+        return len([x for x in proposed_set if x in world.item_pool_config.reserved_locations[player]])
+    return 2
 
 
 def assign_crystal_switch_sectors(dungeon_map, crystal_switches, crystal_barriers, global_pole, assign_one=False):

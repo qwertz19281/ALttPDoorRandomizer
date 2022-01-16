@@ -4,11 +4,12 @@ import math
 import RaceRandom as random
 
 from BaseClasses import Region, RegionType, Shop, ShopType, Location, CollectionState
-from Dungeons import get_dungeon_item_pool
 from EntranceShuffle import connect_entrance
 from Regions import shop_to_location_table, retro_shops, shop_table_by_location
-from Fill import FillError, fill_restrictive, fast_fill
+from Fill import FillError, fill_restrictive, fast_fill, get_dungeon_item_pool
 from Items import ItemFactory
+
+from source.item.FillUtil import trash_items
 
 import source.classes.constants as CONST
 
@@ -261,8 +262,12 @@ def generate_itempool(world, player):
     if player in world.pool_adjustment.keys():
         amt = world.pool_adjustment[player]
         if amt < 0:
-            for _ in range(amt, 0):
-                pool.remove(next(iter([x for x in pool if x in ['Rupees (20)', 'Rupees (5)', 'Rupee (1)']])))
+            trash_options = [x for x in pool if x in trash_items]
+            random.shuffle(trash_options)
+            trash_options = sorted(trash_options, key=lambda x: trash_items[x], reverse=True)
+            while amt > 0 and len(trash_options) > 0:
+                pool.remove(trash_options.pop())
+                amt -= 1
         elif amt > 0:
             for _ in range(0, amt):
                 pool.append('Rupees (20)')

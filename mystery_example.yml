@@ -28,6 +28,10 @@
     full: 2
     crossed: 3
     insanity: 1
+  overworld_map: # control how the overworld map operates when entrance shuffle is on
+    default: 1
+    compass: 10
+    map: 5
   world_state:
     standard: 1
     open: 1

@@ -957,6 +957,7 @@ def create_shops(world, player):
         if world.mode[player] == 'inverted' and region_name == 'Dark Lake Hylia Shop':
             locked = True
             inventory = [('Blue Potion', 160), ('Blue Shield', 50), ('Bombs (10)', 50)]
+            custom = True
         region = world.get_region(region_name, player)
         shop = Shop(region, room_id, type, shopkeeper, custom, locked, sram)
         region.shop = shop
@@ -999,6 +1000,14 @@ def adjust_locations(world, player):
                 world.get_location(location, player).address = 0x400000 + index
                 # player address? it is in the shop table
                 index += 1
+    # unreal events:
+    for l in ['Ganon', 'Agahnim 1', 'Agahnim 2', 'Dark Blacksmith Ruins', 'Frog', 'Missing Smith', 'Floodgate',
+              'Trench 1 Switch', 'Trench 2 Switch', 'Swamp Drain', 'Attic Cracked Floor', 'Suspicious Maiden',
+              'Revealing Light', 'Ice Block Drop', 'Zelda Pickup', 'Zelda Drop Off']:
+        location = world.get_location_unsafe(l, player)
+        if location:
+            location.real = False
+
 
 
 # (type, room_id, shopkeeper, custom, locked, [items])
@@ -1335,16 +1344,16 @@ location_table = {'Mushroom': (0x180013, 0x186338, False, 'in the woods'),
                   'Ice Block Drop': (None, None, False, None),
                   'Zelda Pickup': (None, None, False, None),
                   'Zelda Drop Off': (None, None, False, None),
-                  'Eastern Palace - Prize': ([0x1209D, 0x53EF8, 0x53EF9, 0x180052, 0x18007C, 0xC6FE], None, True, 'Eastern Palace'),
-                  'Desert Palace - Prize': ([0x1209E, 0x53F1C, 0x53F1D, 0x180053, 0x180078, 0xC6FF], None, True, 'Desert Palace'),
-                  'Tower of Hera - Prize': ([0x120A5, 0x53F0A, 0x53F0B, 0x18005A, 0x18007A, 0xC706], None, True, 'Tower of Hera'),
-                  'Palace of Darkness - Prize': ([0x120A1, 0x53F00, 0x53F01, 0x180056, 0x18007D, 0xC702], None, True, 'Palace of Darkness'),
-                  'Swamp Palace - Prize': ([0x120A0, 0x53F6C, 0x53F6D, 0x180055, 0x180071, 0xC701], None, True, 'Swamp Palace'),
-                  'Thieves\' Town - Prize': ([0x120A6, 0x53F36, 0x53F37, 0x18005B, 0x180077, 0xC707], None, True, 'Thieves\' Town'),
-                  'Skull Woods - Prize': ([0x120A3, 0x53F12, 0x53F13, 0x180058, 0x18007B, 0xC704], None, True, 'Skull Woods'),
-                  'Ice Palace - Prize': ([0x120A4, 0x53F5A, 0x53F5B, 0x180059, 0x180073, 0xC705], None, True, 'Ice Palace'),
-                  'Misery Mire - Prize': ([0x120A2, 0x53F48, 0x53F49, 0x180057, 0x180075, 0xC703], None, True, 'Misery Mire'),
-                  'Turtle Rock - Prize': ([0x120A7, 0x53F24, 0x53F25, 0x18005C, 0x180079, 0xC708], None, True, 'Turtle Rock'),
+                  'Eastern Palace - Prize': ([0x1209D, 0x53E76, 0x53E77, 0x180052, 0x180070, 0xC6FE], None, True, 'Eastern Palace'),
+                  'Desert Palace - Prize': ([0x1209E, 0x53E7A, 0x53E7B, 0x180053, 0x180072, 0xC6FF], None, True, 'Desert Palace'),
+                  'Tower of Hera - Prize': ([0x120A5, 0x53E78, 0x53E79, 0x18005A, 0x180071, 0xC706], None, True, 'Tower of Hera'),
+                  'Palace of Darkness - Prize': ([0x120A1, 0x53E7C, 0x53E7D, 0x180056, 0x180073, 0xC702], None, True, 'Palace of Darkness'),
+                  'Swamp Palace - Prize': ([0x120A0, 0x53E88, 0x53E89, 0x180055, 0x180079, 0xC701], None, True, 'Swamp Palace'),
+                  'Thieves\' Town - Prize': ([0x120A6, 0x53E82, 0x53E83, 0x18005B, 0x180076, 0xC707], None, True, 'Thieves\' Town'),
+                  'Skull Woods - Prize': ([0x120A3, 0x53E7E, 0x53E7F, 0x180058, 0x180074, 0xC704], None, True, 'Skull Woods'),
+                  'Ice Palace - Prize': ([0x120A4, 0x53E86, 0x53E87, 0x180059, 0x180078, 0xC705], None, True, 'Ice Palace'),
+                  'Misery Mire - Prize': ([0x120A2, 0x53E84, 0x53E85, 0x180057, 0x180077, 0xC703], None, True, 'Misery Mire'),
+                  'Turtle Rock - Prize': ([0x120A7, 0x53E80, 0x53E81, 0x18005C, 0x180075, 0xC708], None, True, 'Turtle Rock'),
                   'Kakariko Shop - Left': (None, None, False, 'for sale in Kakariko'),
                   'Kakariko Shop - Middle': (None, None, False, 'for sale in Kakariko'),
                   'Kakariko Shop - Right': (None, None, False, 'for sale in Kakariko'),

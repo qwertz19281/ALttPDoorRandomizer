@@ -7,6 +7,7 @@
     "seed": "Seed",
     "player": "Player",
     "shuffling.world": "Shuffling the World about",
+    "shuffling.prep": "Dungeon and Item prep",
     "shuffling.dungeons": "Shuffling dungeons",
     "shuffling.pots": "Shuffling pots",
     "basic.traversal": "--Basic Traversal",
@@ -153,22 +154,28 @@
       "balanced:       vt26 derivative that aims to strike a balance between",
       "                the overworld heavy vt25 and the dungeon heavy vt26",
       "                algorithm.",
-      "vt26:           Shuffle items and place them in a random location",
-      "                that it is not impossible to be in. This includes",
-      "                dungeon keys and items.",
-      "vt25:           Shuffle items and place them in a random location",
-      "                that it is not impossible to be in.",
-      "vt21:           Unbiased in its selection, but has tendency to put",
-      "                Ice Rod in Turtle Rock.",
-      "vt22:           Drops off stale locations after 1/3 of progress",
-      "                items were placed to try to circumvent vt21\\'s",
-      "                shortcomings.",
-      "Freshness:      Keep track of stale locations (ones that cannot be",
-      "                reached yet) and decrease likeliness of selecting",
-      "                them the more often they were found unreachable.",
-      "Flood:          Push out items starting from Link\\'s House and",
-      "                slightly biased to placing progression items with",
-      "                less restrictions."
+      "equitable:      does not place dungeon items first allowing new potential",
+      "                but mixed with the normal advancement pool",
+      "restricted placements: these consider all major items to be special and attempts",
+      "to place items from fixed to semi-random locations. For purposes of these shuffles, all",
+      "Y items, A items, swords (unless vanilla swords), mails, shields, heart containers and",
+      "1/2 magic are considered to be part of a major items pool. Big Keys are added to the pool",
+      "if shuffled. Same for small keys, compasses, maps, keydrops (if small keys are also shuffled),",
+      "1 of each capacity upgrade for shopsanity, the quiver item for retro+shopsanity, and",
+      "triforce pieces for Triforce Hunt. Future modes will add to these as appropriate.",
+      "vanilla_fill    As above, but attempts to place items in their vanilla",
+      "                location first. Major items that cannot be placed that way",
+      "                will attempt to be placed in other failed locations first.",
+      "                Also attempts to place all items in vanilla locations",
+      "major_only      As above, but uses the major items' location preferentially",
+      "                major item location are defined as the group of location where",
+      "                the items are found in the vanilla game.",
+      "dungeon_only    As above, but major items are preferentially placed",
+      "                in dungeons locations first",
+      "district        As above, but groups of locations are chosen randomly",
+      "                from a pool of fixed locations designed to be interesting",
+      "                and give major clues about the location of other",
+      "                advancement items. These fixed groups will be documented."
     ],
     "shuffle": [
       "Select Entrance Shuffling Algorithm. (default: %(default)s)",
@@ -276,6 +283,13 @@
       "Locations:      You will be able to reach every location in the game.",
       "None:           You will be able to reach enough locations to beat the game."
     ],
+    "restrict_boss_items": [
+      "Select which dungeon are not allowed on bosses (default: %(default)s)",
+      "None:           All items allowed",
+      "Mapcompass:     Map and Compass are required before you defeat the boss.",
+      "Dungeon:        Same as above and keys too cannot be on the boss. Small key shuffle",
+      "                and big key shuffle override this behavior"
+    ],
     "hints": [ "Make telepathic tiles and storytellers give helpful hints. (default: %(default)s)" ],
     "shuffleganon": [
       "Include the Ganon's Tower and Pyramid Hole in the",
@@ -283,6 +297,9 @@
     ],
     "shufflelinks": [
       "Include Link's House in the entrance shuffle pool. (default: %(default)s)"
+    ],
+    "overworld_map": [
+      "Control if and how the overworld map indicators show the locations of dungeons (default: %(default)s)"
     ],
     "heartbeep": [
       "Select the rate at which the heart beep sound is played at",

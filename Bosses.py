@@ -1,8 +1,8 @@
 import logging
 import RaceRandom as random
 
-from BaseClasses import Boss
-from Fill import FillError
+from BaseClasses import Boss, FillError
+
 
 def BossFactory(boss, player):
     if boss is None:

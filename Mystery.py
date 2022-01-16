@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--names', default='')
     parser.add_argument('--teams', default=1, type=lambda value: max(int(value), 1))
     parser.add_argument('--create_spoiler', action='store_true')
+    parser.add_argument('--suppress_rom', action='store_true')
     parser.add_argument('--rom')
     parser.add_argument('--enemizercli')
     parser.add_argument('--entranceoverride')
@@ -62,6 +63,7 @@ def main():
     erargs.seed = seed
     erargs.names = args.names
     erargs.create_spoiler = args.create_spoiler
+    erargs.suppress_rom = args.suppress_rom
     erargs.race = True
     erargs.outputname = seedname
     erargs.outputpath = args.outputpath
@@ -74,6 +76,8 @@ def main():
     if args.entranceoverride:
         erargs.entranceoverride = args.entranceoverride
 
+    mw_settings = {'algorithm': False}
+
     settings_cache = {k: (roll_settings(v) if args.samesettings else None) for k, v in weights_cache.items()}
 
     for player in range(1, args.multi + 1):
@@ -82,7 +86,12 @@ def main():
             settings = settings_cache[path] if settings_cache[path] else roll_settings(weights_cache[path])
             for k, v in vars(settings).items():
                 if v is not None:
-                    getattr(erargs, k)[player] = v
+                    if k == 'algorithm':  # multiworld wide parameters
+                        if not mw_settings[k]:  # only use the first roll
+                            setattr(erargs, k, v)
+                            mw_settings[k] = True
+                    else:
+                        getattr(erargs, k)[player] = v
         else:
             raise RuntimeError(f'No weights specified for player {player}')
 
@@ -130,6 +139,8 @@ def roll_settings(weights):
 
     ret = argparse.Namespace()
 
+    ret.algorithm = get_choice('algorithm')
+
     glitches_required = get_choice('glitches_required')
     if glitches_required is not None:
         if glitches_required not in ['none', 'no_logic']:
@@ -147,9 +158,12 @@ def roll_settings(weights):
     ret.bigkeyshuffle = get_choice('bigkey_shuffle') == 'on' if 'bigkey_shuffle' in weights else dungeon_items in ['full']
 
     ret.accessibility = get_choice('accessibility')
+    ret.restrict_boss_items = get_choice('restrict_boss_items')
 
     entrance_shuffle = get_choice('entrance_shuffle')
     ret.shuffle = entrance_shuffle if entrance_shuffle != 'none' else 'vanilla'
+    overworld_map = get_choice('overworld_map')
+    ret.overworld_map = overworld_map if overworld_map != 'default' else 'default'
     door_shuffle = get_choice('door_shuffle')
     ret.door_shuffle = door_shuffle if door_shuffle != 'none' else 'vanilla'
     ret.intensity = get_choice('intensity')

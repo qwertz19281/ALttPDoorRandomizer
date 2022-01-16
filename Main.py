@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import copy
 from itertools import zip_longest
 import json
@@ -20,16 +19,19 @@ from InvertedRegions import create_inverted_regions, mark_dark_world_regions
 from EntranceShuffle import link_entrances, link_inverted_entrances
 from Rom import patch_rom, patch_race_rom, patch_enemizer, apply_rom_settings, LocalRom, JsonRom, get_hash_string
 from Doors import create_doors
-from DoorShuffle import link_doors, connect_portal
+from DoorShuffle import link_doors, connect_portal, link_doors_prep
 from RoomData import create_rooms
 from Rules import set_rules
-from Dungeons import create_dungeons, fill_dungeons, fill_dungeons_restrictive
-from Fill import distribute_items_cutoff, distribute_items_staleness, distribute_items_restrictive, flood_items
+from Dungeons import create_dungeons
+from Fill import distribute_items_restrictive, promote_dungeon_items, fill_dungeons_restrictive
 from Fill import sell_potions, sell_keys, balance_multiworld_progression, balance_money_progression, lock_shop_locations
 from ItemList import generate_itempool, difficulties, fill_prizes, customize_shops
 from Utils import output_path, parse_player_names
 
-__version__ = '0.5.1.6-u'
+from source.item.FillUtil import create_item_pool_config, massage_item_pool, district_item_pool_config
+
+
+__version__ = '1.0.0.0-u'
 
 from source.classes.BabelFish import BabelFish
 
@@ -104,6 +106,8 @@ def main(args, seed=None, fish=None):
     world.treasure_hunt_total = args.triforce_pool.copy()
     world.shufflelinks = args.shufflelinks.copy()
     world.pseudoboots = args.pseudoboots.copy()
+    world.overworld_map = args.overworld_map.copy()
+    world.restrict_boss_items = args.restrict_boss_items.copy()
 
     world.rom_seeds = {player: random.randint(0, 999999999) for player in range(1, world.players + 1)}
 
@@ -163,7 +167,13 @@ def main(args, seed=None, fish=None):
         else:
             link_inverted_entrances(world, player)
 
-    logger.info(world.fish.translate("cli","cli","shuffling.dungeons"))
+    logger.info(world.fish.translate("cli", "cli", "shuffling.prep"))
+    for player in range(1, world.players + 1):
+        link_doors_prep(world, player)
+
+    create_item_pool_config(world)
+
+    logger.info(world.fish.translate("cli", "cli", "shuffling.dungeons"))
 
     for player in range(1, world.players + 1):
         link_doors(world, player)
@@ -171,8 +181,7 @@ def main(args, seed=None, fish=None):
             mark_light_world_regions(world, player)
         else:
             mark_dark_world_regions(world, player)
-    logger.info(world.fish.translate("cli","cli","generating.itempool"))
-    logger.info(world.fish.translate("cli","cli","generating.itempool"))
+    logger.info(world.fish.translate("cli", "cli", "generating.itempool"))
 
     for player in range(1, world.players + 1):
         generate_itempool(world, player)
@@ -190,8 +199,9 @@ def main(args, seed=None, fish=None):
         else:
             lock_shop_locations(world, player)
 
-
-    logger.info(world.fish.translate("cli","cli","placing.dungeon.prizes"))
+    district_item_pool_config(world)
+    massage_item_pool(world)
+    logger.info(world.fish.translate("cli", "cli", "placing.dungeon.prizes"))
 
     fill_prizes(world)
 
@@ -200,14 +210,12 @@ def main(args, seed=None, fish=None):
 
     logger.info(world.fish.translate("cli","cli","placing.dungeon.items"))
 
-    shuffled_locations = None
-    if args.algorithm in ['balanced', 'vt26'] or any(list(args.mapshuffle.values()) + list(args.compassshuffle.values()) +
-                                                     list(args.keyshuffle.values()) + list(args.bigkeyshuffle.values())):
+    if args.algorithm != 'equitable':
         shuffled_locations = world.get_unfilled_locations()
         random.shuffle(shuffled_locations)
         fill_dungeons_restrictive(world, shuffled_locations)
     else:
-        fill_dungeons(world)
+        promote_dungeon_items(world)
 
     for player in range(1, world.players+1):
         if world.logic[player] != 'nologic':
@@ -225,34 +233,22 @@ def main(args, seed=None, fish=None):
 
     logger.info(world.fish.translate("cli","cli","fill.world"))
 
-    if args.algorithm == 'flood':
-        flood_items(world)  # different algo, biased towards early game progress items
-    elif args.algorithm == 'vt21':
-        distribute_items_cutoff(world, 1)
-    elif args.algorithm == 'vt22':
-        distribute_items_cutoff(world, 0.66)
-    elif args.algorithm == 'freshness':
-        distribute_items_staleness(world)
-    elif args.algorithm == 'vt25':
-        distribute_items_restrictive(world, False)
-    elif args.algorithm == 'vt26':
-
-        distribute_items_restrictive(world, True, shuffled_locations)
-    elif args.algorithm == 'balanced':
-        distribute_items_restrictive(world, True)
+    distribute_items_restrictive(world, True)
 
     if world.players > 1:
-        logger.info(world.fish.translate("cli","cli","balance.multiworld"))
-        balance_multiworld_progression(world)
+        logger.info(world.fish.translate("cli", "cli", "balance.multiworld"))
+        if args.algorithm in ['balanced', 'equitable']:
+            balance_multiworld_progression(world)
 
     # if we only check for beatable, we can do this sanity check first before creating the rom
     if not world.can_beat_game(log_error=True):
-        raise RuntimeError(world.fish.translate("cli","cli","cannot.beat.game"))
+        raise RuntimeError(world.fish.translate("cli", "cli", "cannot.beat.game"))
 
     for player in range(1, world.players+1):
         if world.shopsanity[player]:
             customize_shops(world, player)
-    balance_money_progression(world)
+    if args.algorithm in ['balanced', 'equitable']:
+        balance_money_progression(world)
 
     outfilebase = f'DR_{args.outputname if args.outputname else world.seed}'
 
@@ -404,6 +400,7 @@ def copy_world(world):
     ret.keydropshuffle = world.keydropshuffle.copy()
     ret.mixed_travel = world.mixed_travel.copy()
     ret.standardize_palettes = world.standardize_palettes.copy()
+    ret.restrict_boss_items = world.restrict_boss_items.copy()
 
     ret.exp_cache = world.exp_cache.copy()
 
@@ -578,11 +575,11 @@ def create_playthrough(world):
             # todo: this is not very efficient, but I'm not sure how else to do it for this backwards logic
             # world.clear_exp_cache()
             if world.can_beat_game(state_cache[num]):
-                # logging.getLogger('').debug(f'{old_item.name} (Player {old_item.player}) is not required')
+                logging.getLogger('').debug(f'{old_item.name} (Player {old_item.player}) is not required')
                 to_delete.add(location)
             else:
                 # still required, got to keep it around
-                # logging.getLogger('').debug(f'{old_item.name} (Player {old_item.player}) is required')
+                logging.getLogger('').debug(f'{old_item.name} (Player {old_item.player}) is required')
                 location.item = old_item
 
         # cull entries in spheres for spoiler walkthrough at end

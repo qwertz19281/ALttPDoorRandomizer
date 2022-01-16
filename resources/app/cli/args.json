@@ -101,12 +101,11 @@
   "algorithm": {
     "choices": [
       "balanced",
-      "freshness",
-      "flood",
-      "vt21",
-      "vt22",
-      "vt25",
-      "vt26"
+      "equitable",
+      "vanilla_fill",
+      "major_only",
+      "dungeon_only",
+      "district"
     ]
   },
   "shuffle": {
@@ -254,6 +253,13 @@
       "none"
     ]
   },
+  "restrict_boss_items": {
+    "choices": [
+      "none",
+      "mapcompass",
+      "dungeon"
+    ]
+  },
   "hints": {
     "action": "store_true",
     "type": "bool"
@@ -317,6 +323,13 @@
   "shufflelinks": {
     "action": "store_true",
     "type": "bool"
+  },
+  "overworld_map": {
+    "choices": [
+      "default",
+      "compass",
+      "map"
+    ]
   },
   "pseudoboots": {
     "action": "store_true",

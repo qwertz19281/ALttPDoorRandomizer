@@ -116,13 +116,21 @@
       "type": "selectbox",
       "default": "balanced",
       "options": [
-        "freshness",
-        "flood",
-        "vt21",
-        "vt22",
-        "vt25",
-        "vt26",
-        "balanced"
+        "balanced",
+        "equitable",
+        "vanilla_fill",
+        "major_only",
+        "dungeon_only",
+        "district"
+      ]
+    },
+    "restrict_boss_items": {
+      "type": "selectbox",
+      "default": "none",
+      "options": [
+        "none",
+        "mapcompass",
+        "dungeon"
       ]
     }
   }

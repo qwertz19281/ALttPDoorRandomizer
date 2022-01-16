@@ -3,173 +3,68 @@ import collections
 import itertools
 import logging
 
-from BaseClasses import CollectionState
+from BaseClasses import CollectionState, FillError
 from Items import ItemFactory
 from Regions import shop_to_location_table, retro_shops
+from source.item.FillUtil import filter_locations, classify_major_items, replace_trash_item, vanilla_fallback
 
 
-class FillError(RuntimeError):
-    pass
-
-def distribute_items_cutoff(world, cutoffrate=0.33):
-    # get list of locations to fill in
-    fill_locations = world.get_unfilled_locations()
-    random.shuffle(fill_locations)
-
-    # get items to distribute
-    random.shuffle(world.itempool)
-    itempool = world.itempool
-
-    total_advancement_items = len([item for item in itempool if item.advancement])
-    placed_advancement_items = 0
-
-    progress_done = False
-    advancement_placed = False
-
-    # sweep once to pick up preplaced items
-    world.state.sweep_for_events()
-
-    while itempool and fill_locations:
-        candidate_item_to_place = None
-        item_to_place = None
-        for item in itempool:
-            if advancement_placed or (progress_done and (item.advancement or item.priority)):
-                item_to_place = item
-                break
-            if item.advancement:
-                candidate_item_to_place = item
-                if world.unlocks_new_location(item):
-                    item_to_place = item
-                    placed_advancement_items += 1
-                    break
-
-        if item_to_place is None:
-            # check if we can reach all locations and that is why we find no new locations to place
-            if not progress_done and len(world.get_reachable_locations()) == len(world.get_locations()):
-                progress_done = True
-                continue
-            # check if we have now placed all advancement items
-            if progress_done:
-                advancement_placed = True
-                continue
-            # we might be in a situation where all new locations require multiple items to reach. If that is the case, just place any advancement item we've found and continue trying
-            if candidate_item_to_place is not None:
-                item_to_place = candidate_item_to_place
-                placed_advancement_items += 1
-            else:
-                # we placed all available progress items. Maybe the game can be beaten anyway?
-                if world.can_beat_game():
-                    logging.getLogger('').warning('Not all locations reachable. Game beatable anyway.')
-                    progress_done = True
-                    continue
-                raise FillError('No more progress items left to place.')
-
-        spot_to_fill = None
-        for location in fill_locations if placed_advancement_items / total_advancement_items < cutoffrate else reversed(fill_locations):
-            if location.can_fill(world.state, item_to_place):
-                spot_to_fill = location
-                break
-
-        if spot_to_fill is None:
-            # we filled all reachable spots. Maybe the game can be beaten anyway?
-            if world.can_beat_game():
-                logging.getLogger('').warning('Not all items placed. Game beatable anyway.')
-                break
-            raise FillError('No more spots to place %s' % item_to_place)
-
-        world.push_item(spot_to_fill, item_to_place, True)
-        itempool.remove(item_to_place)
-        fill_locations.remove(spot_to_fill)
-    unplaced = [item.name for item in itempool]
-    unfilled = [location.name for location in fill_locations]
-    if unplaced or unfilled:
-        logging.warning('Unplaced items: %s - Unfilled Locations: %s', unplaced, unfilled)
+def get_dungeon_item_pool(world):
+    return [item for dungeon in world.dungeons for item in dungeon.all_items]
 
 
-def distribute_items_staleness(world):
-    # get list of locations to fill in
-    fill_locations = world.get_unfilled_locations()
-    random.shuffle(fill_locations)
+def promote_dungeon_items(world):
+    world.itempool += get_dungeon_item_pool(world)
 
-    # get items to distribute
-    random.shuffle(world.itempool)
-    itempool = world.itempool
+    for item in world.get_items():
+        if item.smallkey or item.bigkey:
+            item.advancement = True
+        elif item.map or item.compass:
+            item.priority = True
+    dungeon_tracking(world)
 
-    progress_done = False
-    advancement_placed = False
 
-    # sweep once to pick up preplaced items
-    world.state.sweep_for_events()
+def dungeon_tracking(world):
+    for dungeon in world.dungeons:
+        layout = world.dungeon_layouts[dungeon.player][dungeon.name]
+        layout.dungeon_items = len([i for i in dungeon.all_items if i.is_inside_dungeon_item(world)])
+        layout.free_items = layout.location_cnt - layout.dungeon_items
 
-    while itempool and fill_locations:
-        candidate_item_to_place = None
-        item_to_place = None
-        for item in itempool:
-            if advancement_placed or (progress_done and (item.advancement or item.priority)):
-                item_to_place = item
-                break
-            if item.advancement:
-                candidate_item_to_place = item
-                if world.unlocks_new_location(item):
-                    item_to_place = item
-                    break
 
-        if item_to_place is None:
-            # check if we can reach all locations and that is why we find no new locations to place
-            if not progress_done and len(world.get_reachable_locations()) == len(world.get_locations()):
-                progress_done = True
-                continue
-            # check if we have now placed all advancement items
-            if progress_done:
-                advancement_placed = True
-                continue
-            # we might be in a situation where all new locations require multiple items to reach. If that is the case, just place any advancement item we've found and continue trying
-            if candidate_item_to_place is not None:
-                item_to_place = candidate_item_to_place
-            else:
-                # we placed all available progress items. Maybe the game can be beaten anyway?
-                if world.can_beat_game():
-                    logging.getLogger('').warning('Not all locations reachable. Game beatable anyway.')
-                    progress_done = True
-                    continue
-                raise FillError('No more progress items left to place.')
+def fill_dungeons_restrictive(world, shuffled_locations):
+    dungeon_tracking(world)
+    all_state_base = world.get_all_state()
 
-        spot_to_fill = None
-        for location in fill_locations:
-            # increase likelyhood of skipping a location if it has been found stale
-            if not progress_done and random.randint(0, location.staleness_count) > 2:
-                continue
+    # for player in range(1, world.players + 1):
+    #     pinball_room = world.get_location('Skull Woods - Pinball Room', player)
+    #     if world.retro[player]:
+    #         world.push_item(pinball_room, ItemFactory('Small Key (Universal)', player), False)
+    #     else:
+    #         world.push_item(pinball_room, ItemFactory('Small Key (Skull Woods)', player), False)
+    #     pinball_room.event = True
+    #     pinball_room.locked = True
+    #     shuffled_locations.remove(pinball_room)
 
-            if location.can_fill(world.state, item_to_place):
-                spot_to_fill = location
-                break
-            else:
-                location.staleness_count += 1
+    # with shuffled dungeon items they are distributed as part of the normal item pool
+    for item in world.get_items():
+        if (item.smallkey and world.keyshuffle[item.player]) or (item.bigkey and world.bigkeyshuffle[item.player]):
+            item.advancement = True
+        elif (item.map and world.mapshuffle[item.player]) or (item.compass and world.compassshuffle[item.player]):
+            item.priority = True
 
-        # might have skipped too many locations due to potential staleness. Do not check for staleness now to find a candidate
-        if spot_to_fill is None:
-            for location in fill_locations:
-                if location.can_fill(world.state, item_to_place):
-                    spot_to_fill = location
-                    break
+    dungeon_items = [item for item in get_dungeon_item_pool(world) if item.is_inside_dungeon_item(world)]
 
-        if spot_to_fill is None:
-            # we filled all reachable spots. Maybe the game can be beaten anyway?
-            if world.can_beat_game():
-                logging.getLogger('').warning('Not all items placed. Game beatable anyway.')
-                break
-            raise FillError('No more spots to place %s' % item_to_place)
+    # sort in the order Big Key, Small Key, Other before placing dungeon items
+    sort_order = {"BigKey": 3, "SmallKey": 2}
+    dungeon_items.sort(key=lambda item: sort_order.get(item.type, 1))
 
-        world.push_item(spot_to_fill, item_to_place, True)
-        itempool.remove(item_to_place)
-        fill_locations.remove(spot_to_fill)
+    fill_restrictive(world, all_state_base, shuffled_locations, dungeon_items,
+                     keys_in_itempool={player: not world.keyshuffle[player] for player in range(1, world.players+1)},
+                     single_player_placement=True)
 
-    unplaced = [item.name for item in itempool]
-    unfilled = [location.name for location in fill_locations]
-    if unplaced or unfilled:
-        logging.warning('Unplaced items: %s - Unfilled Locations: %s', unplaced, unfilled)
 
-def fill_restrictive(world, base_state, locations, itempool, keys_in_itempool = None, single_player_placement = False):
+def fill_restrictive(world, base_state, locations, itempool, keys_in_itempool=None, single_player_placement=False,
+                     vanilla=False):
     def sweep_from_pool():
         new_state = base_state.copy()
         for item in itempool:
@@ -201,43 +96,63 @@ def fill_restrictive(world, base_state, locations, itempool, keys_in_itempool = 
 
                 spot_to_fill = None
 
-                for location in locations:
-                    if item_to_place.smallkey or item_to_place.bigkey:  # a better test to see if a key can go there
-                        location.item = item_to_place
-                        test_state = maximum_exploration_state.copy()
-                        test_state.stale[item_to_place.player] = True
-                    else:
-                        test_state = maximum_exploration_state
-                    if (not single_player_placement or location.player == item_to_place.player)\
-                            and location.can_fill(test_state, item_to_place, perform_access_check)\
-                            and valid_key_placement(item_to_place, location, itempool if (keys_in_itempool and keys_in_itempool[item_to_place.player]) else world.itempool, world):
-                        spot_to_fill = location
+                item_locations = filter_locations(item_to_place, locations, world, vanilla)
+                for location in item_locations:
+                    spot_to_fill = verify_spot_to_fill(location, item_to_place, maximum_exploration_state,
+                                                       single_player_placement, perform_access_check, itempool,
+                                                       keys_in_itempool, world)
+                    if spot_to_fill:
                         break
-                    if item_to_place.smallkey or item_to_place.bigkey:
-                        location.item = None
-
                 if spot_to_fill is None:
-                    # we filled all reachable spots. Maybe the game can be beaten anyway?
-                    unplaced_items.insert(0, item_to_place)
-                    if world.can_beat_game():
-                        if world.accessibility[item_to_place.player] != 'none':
-                            logging.getLogger('').warning('Not all items placed. Game beatable anyway. (Could not place %s)' % item_to_place)
+                    if vanilla:
+                        unplaced_items.insert(0, item_to_place)
                         continue
-                    spot_to_fill = last_ditch_placement(item_to_place, locations, world, maximum_exploration_state,
-                                                        base_state, itempool, keys_in_itempool, single_player_placement)
+                    spot_to_fill = recovery_placement(item_to_place, locations, world, maximum_exploration_state,
+                                                      base_state, itempool, perform_access_check, item_locations,
+                                                      keys_in_itempool, single_player_placement)
                     if spot_to_fill is None:
+                        # we filled all reachable spots. Maybe the game can be beaten anyway?
+                        unplaced_items.insert(0, item_to_place)
+                        if world.can_beat_game():
+                            if world.accessibility[item_to_place.player] != 'none':
+                                logging.getLogger('').warning('Not all items placed. Game beatable anyway.'
+                                                              f' (Could not place {item_to_place})')
+                            continue
                         raise FillError('No more spots to place %s' % item_to_place)
 
                 world.push_item(spot_to_fill, item_to_place, False)
                 track_outside_keys(item_to_place, spot_to_fill, world)
+                track_dungeon_items(item_to_place, spot_to_fill, world)
                 locations.remove(spot_to_fill)
                 spot_to_fill.event = True
 
     itempool.extend(unplaced_items)
 
 
+def verify_spot_to_fill(location, item_to_place, max_exp_state, single_player_placement, perform_access_check,
+                        itempool, keys_in_itempool, world):
+    if item_to_place.smallkey or item_to_place.bigkey:  # a better test to see if a key can go there
+        location.item = item_to_place
+        test_state = max_exp_state.copy()
+        test_state.stale[item_to_place.player] = True
+    else:
+        test_state = max_exp_state
+    if not single_player_placement or location.player == item_to_place.player:
+        if location.can_fill(test_state, item_to_place, perform_access_check):
+            test_pool = itempool if (keys_in_itempool and keys_in_itempool[item_to_place.player]) else world.itempool
+            if valid_key_placement(item_to_place, location, test_pool, world):
+                if item_to_place.crystal or valid_dungeon_placement(item_to_place, location, world):
+                    return location
+    if item_to_place.smallkey or item_to_place.bigkey:
+        location.item = None
+    return None
+
+
 def valid_key_placement(item, location, itempool, world):
-    if (not item.smallkey and not item.bigkey) or item.player != location.player or world.retro[item.player] or world.logic[item.player] == 'nologic':
+    if not valid_reserved_placement(item, location, world):
+        return False
+    if ((not item.smallkey and not item.bigkey) or item.player != location.player
+       or world.retro[item.player] or world.logic[item.player] == 'nologic'):
         return True
     dungeon = location.parent_region.dungeon
     if dungeon:
@@ -251,9 +166,24 @@ def valid_key_placement(item, location, itempool, world):
         cr_count = world.crystals_needed_for_gt[location.player]
         return key_logic.check_placement(unplaced_keys, location if item.bigkey else None, prize_loc, cr_count)
     else:
-        inside_dungeon_item = ((item.smallkey and not world.keyshuffle[item.player])
-                               or (item.bigkey and not world.bigkeyshuffle[item.player]))
-        return not inside_dungeon_item
+        return not item.is_inside_dungeon_item(world)
+
+
+def valid_reserved_placement(item, location, world):
+    if item.player == location.player and item.is_inside_dungeon_item(world):
+        return location.name not in world.item_pool_config.reserved_locations[location.player]
+    return True
+
+
+def valid_dungeon_placement(item, location, world):
+    if location.parent_region.dungeon:
+        layout = world.dungeon_layouts[location.player][location.parent_region.dungeon.name]
+        if not is_dungeon_item(item, world) or item.player != location.player:
+            return layout.free_items > 0
+        else:
+            # the second half probably doesn't matter much - should always return true
+            return item.dungeon == location.parent_region.dungeon.name and layout.dungeon_items > 0
+    return not is_dungeon_item(item, world)
 
 
 def track_outside_keys(item, location, world):
@@ -265,6 +195,72 @@ def track_outside_keys(item, location, world):
         if loc_dungeon and loc_dungeon.name == item_dungeon:
             return  # this is an inside key
     world.key_logic[item.player][item_dungeon].outside_keys += 1
+
+
+def track_dungeon_items(item, location, world):
+    if location.parent_region.dungeon and not item.crystal:
+        layout = world.dungeon_layouts[location.player][location.parent_region.dungeon.name]
+        if is_dungeon_item(item, world) and item.player == location.player:
+            layout.dungeon_items -= 1
+        else:
+            layout.free_items -= 1
+
+
+def is_dungeon_item(item, world):
+    return ((item.smallkey and not world.keyshuffle[item.player])
+            or (item.bigkey and not world.bigkeyshuffle[item.player])
+            or (item.compass and not world.compassshuffle[item.player])
+            or (item.map and not world.mapshuffle[item.player]))
+
+
+def recovery_placement(item_to_place, locations, world, state, base_state, itempool, perform_access_check, attempted,
+                       keys_in_itempool=None, single_player_placement=False):
+    logging.getLogger('').debug(f'Could not place {item_to_place} attempting recovery')
+    if world.algorithm in ['balanced', 'equitable']:
+        return last_ditch_placement(item_to_place, locations, world, state, base_state, itempool, keys_in_itempool,
+                                    single_player_placement)
+    elif world.algorithm == 'vanilla_fill':
+        if item_to_place.type == 'Crystal':
+            possible_swaps = [x for x in state.locations_checked if x.item.type == 'Crystal']
+            return try_possible_swaps(possible_swaps, item_to_place, locations, world, base_state, itempool,
+                                      keys_in_itempool, single_player_placement)
+        else:
+            i, config = 0, world.item_pool_config
+            tried = set(attempted)
+            if not item_to_place.is_inside_dungeon_item(world):
+                while i < len(config.location_groups[item_to_place.player]):
+                    fallback_locations = config.location_groups[item_to_place.player][i].locations
+                    other_locs = [x for x in locations if x.name in fallback_locations]
+                    for location in other_locs:
+                        spot_to_fill = verify_spot_to_fill(location, item_to_place, state, single_player_placement,
+                                                           perform_access_check, itempool, keys_in_itempool, world)
+                        if spot_to_fill:
+                            return spot_to_fill
+                    i += 1
+                    tried.update(other_locs)
+            else:
+               other_locations = vanilla_fallback(item_to_place, locations, world)
+               for location in other_locations:
+                   spot_to_fill = verify_spot_to_fill(location, item_to_place, state, single_player_placement,
+                                                      perform_access_check, itempool, keys_in_itempool, world)
+                   if spot_to_fill:
+                       return spot_to_fill
+               tried.update(other_locations)
+            other_locations = [x for x in locations if x not in tried]
+            for location in other_locations:
+                spot_to_fill = verify_spot_to_fill(location, item_to_place, state, single_player_placement,
+                                                   perform_access_check, itempool, keys_in_itempool, world)
+                if spot_to_fill:
+                    return spot_to_fill
+            return None
+    else:
+        other_locations = [x for x in locations if x not in attempted]
+        for location in other_locations:
+            spot_to_fill = verify_spot_to_fill(location, item_to_place, state, single_player_placement,
+                                               perform_access_check, itempool, keys_in_itempool, world)
+            if spot_to_fill:
+                return spot_to_fill
+    return None
 
 
 def last_ditch_placement(item_to_place, locations, world, state, base_state, itempool,
@@ -285,7 +281,12 @@ def last_ditch_placement(item_to_place, locations, world, state, base_state, ite
         possible_swaps = [x for x in state.locations_checked
                           if x.item.type not in ['Event', 'Crystal'] and not x.forced_item]
     swap_locations = sorted(possible_swaps, key=location_preference)
+    return try_possible_swaps(swap_locations, item_to_place, locations, world, base_state, itempool,
+                              keys_in_itempool, single_player_placement)
 
+
+def try_possible_swaps(swap_locations, item_to_place, locations, world, base_state, itempool,
+                       keys_in_itempool=None, single_player_placement=False):
     for location in swap_locations:
         old_item = location.item
         new_pool = list(itempool) + [old_item]
@@ -348,17 +349,21 @@ def distribute_items_restrictive(world, gftower_trash=False, fill_locations=None
         random.shuffle(fill_locations)
 
     # get items to distribute
+    classify_major_items(world)
     random.shuffle(world.itempool)
     progitempool = [item for item in world.itempool if item.advancement]
     prioitempool = [item for item in world.itempool if not item.advancement and item.priority]
     restitempool = [item for item in world.itempool if not item.advancement and not item.priority]
 
+    gftower_trash &= world.algorithm in ['balanced', 'equitable', 'dungeon_only']
+    # dungeon only may fill up the dungeon... and push items out into the overworld
+
     # fill in gtower locations with trash first
     for player in range(1, world.players + 1):
         if not gftower_trash or not world.ganonstower_vanilla[player] or world.doorShuffle[player] == 'crossed' or world.logic[player] in ['owglitches', 'nologic']:
             continue
-
-        gftower_trash_count = (random.randint(15, 50) if world.goal[player] == 'triforcehunt' else random.randint(0, 15))
+        max_trash = 8 if world.algorithm == 'dungeon_only' else 15
+        gftower_trash_count = (random.randint(15, 50) if world.goal[player] == 'triforcehunt' else random.randint(0, max_trash))
 
         gtower_locations = [location for location in fill_locations if 'Ganons Tower' in location.name and location.player == player]
         random.shuffle(gtower_locations)
@@ -376,20 +381,50 @@ def distribute_items_restrictive(world, gftower_trash=False, fill_locations=None
     # Make sure the escape small key is placed first in standard with key shuffle to prevent running out of spots
     # todo: crossed
     progitempool.sort(key=lambda item: 1 if item.name == 'Small Key (Escape)' and world.keyshuffle[item.player] and world.mode[item.player] == 'standard' else 0)
+    keys_in_pool = {player: world.keyshuffle[player] or world.algorithm != 'balanced' for player in range(1, world.players + 1)}
 
-    fill_restrictive(world, world.state, fill_locations, progitempool,
-                     keys_in_itempool={player: world.keyshuffle[player] for player in range(1, world.players + 1)})
-
+    # sort maps and compasses to the back -- this may not be viable in equitable & ambrosia
+    progitempool.sort(key=lambda item: 0 if item.map or item.compass else 1)
+    if world.algorithm == 'vanilla_fill':
+        fill_restrictive(world, world.state, fill_locations, progitempool, keys_in_pool, vanilla=True)
+    fill_restrictive(world, world.state, fill_locations, progitempool, keys_in_pool)
     random.shuffle(fill_locations)
+    if world.algorithm == 'balanced':
+        fast_fill(world, prioitempool, fill_locations)
+    elif world.algorithm == 'vanilla_fill':
+        fast_vanilla_fill(world, prioitempool, fill_locations)
+    elif world.algorithm in ['major_only', 'dungeon_only', 'district']:
+        filtered_fill(world, prioitempool, fill_locations)
+    else:  # just need to ensure dungeon items still get placed in dungeons
+        fast_equitable_fill(world, prioitempool, fill_locations)
+    # placeholder work
+    if world.algorithm == 'district':
+        random.shuffle(fill_locations)
+        placeholder_items = [item for item in world.itempool if item.name == 'Rupee (1)']
+        num_ph_items = len(placeholder_items)
+        if num_ph_items > 0:
+            placeholder_locations = filter_locations('Placeholder', fill_locations, world)
+            num_ph_locations = len(placeholder_locations)
+            if num_ph_items < num_ph_locations < len(fill_locations):
+                for _ in range(num_ph_locations - num_ph_items):
+                    placeholder_items.append(replace_trash_item(restitempool, 'Rupee (1)'))
+            assert len(placeholder_items) == len(placeholder_locations)
+            for i in placeholder_items:
+                restitempool.remove(i)
+            for l in placeholder_locations:
+                fill_locations.remove(l)
+            filtered_fill(world, placeholder_items, placeholder_locations)
 
-    fast_fill(world, prioitempool, fill_locations)
-
-    fast_fill(world, restitempool, fill_locations)
+    if world.algorithm == 'vanilla_fill':
+        fast_vanilla_fill(world, restitempool, fill_locations)
+    else:
+        fast_fill(world, restitempool, fill_locations)
 
     unplaced = [item.name for item in prioitempool + restitempool]
     unfilled = [location.name for location in fill_locations]
     if unplaced or unfilled:
         logging.warning('Unplaced items: %s - Unfilled Locations: %s', unplaced, unfilled)
+
 
 def fast_fill(world, item_pool, fill_locations):
     while item_pool and fill_locations:
@@ -398,77 +433,59 @@ def fast_fill(world, item_pool, fill_locations):
         world.push_item(spot_to_fill, item_to_place, False)
 
 
-def flood_items(world):
-    # get items to distribute
-    random.shuffle(world.itempool)
-    itempool = world.itempool
-    progress_done = False
+def filtered_fill(world, item_pool, fill_locations):
+    while item_pool and fill_locations:
+        item_to_place = item_pool.pop()
+        item_locations = filter_locations(item_to_place, fill_locations, world)
+        spot_to_fill = next(iter(item_locations))
+        fill_locations.remove(spot_to_fill)
+        world.push_item(spot_to_fill, item_to_place, False)
 
     # sweep once to pick up preplaced items
     world.state.sweep_for_events()
 
-    # fill world from top of itempool while we can
-    while not progress_done:
-        location_list = world.get_unfilled_locations()
-        random.shuffle(location_list)
-        spot_to_fill = None
-        for location in location_list:
-            if location.can_fill(world.state, itempool[0]):
-                spot_to_fill = location
-                break
 
-        if spot_to_fill:
-            item = itempool.pop(0)
-            world.push_item(spot_to_fill, item, True)
-            continue
+def fast_vanilla_fill(world, item_pool, fill_locations):
+    next_item_pool = []
+    while item_pool and fill_locations:
+        item_to_place = item_pool.pop()
+        locations = filter_locations(item_to_place, fill_locations, world, vanilla_skip=True)
+        if len(locations):
+            spot_to_fill = locations.pop()
+            fill_locations.remove(spot_to_fill)
+            world.push_item(spot_to_fill, item_to_place, False)
+        else:
+            next_item_pool.append(item_to_place)
+    while next_item_pool and fill_locations:
+        item_to_place = next_item_pool.pop()
+        spot_to_fill = next(iter(filter_locations(item_to_place, fill_locations, world)))
+        fill_locations.remove(spot_to_fill)
+        world.push_item(spot_to_fill, item_to_place, False)
 
-        # ran out of spots, check if we need to step in and correct things
-        if len(world.get_reachable_locations()) == len(world.get_locations()):
-            progress_done = True
-            continue
 
-        # need to place a progress item instead of an already placed item, find candidate
-        item_to_place = None
-        candidate_item_to_place = None
-        for item in itempool:
-            if item.advancement:
-                candidate_item_to_place = item
-                if world.unlocks_new_location(item):
-                    item_to_place = item
-                    break
+def filtered_equitable_fill(world, item_pool, fill_locations):
+    while item_pool and fill_locations:
+        item_to_place = item_pool.pop()
+        item_locations = filter_locations(item_to_place, fill_locations, world)
+        spot_to_fill = next(l for l in item_locations if valid_dungeon_placement(item_to_place, l, world))
+        fill_locations.remove(spot_to_fill)
+        world.push_item(spot_to_fill, item_to_place, False)
+        track_dungeon_items(item_to_place, spot_to_fill, world)
 
-        # we might be in a situation where all new locations require multiple items to reach. If that is the case, just place any advancement item we've found and continue trying
-        if item_to_place is None:
-            if candidate_item_to_place is not None:
-                item_to_place = candidate_item_to_place
-            else:
-                raise FillError('No more progress items left to place.')
 
-        # find item to replace with progress item
-        location_list = world.get_reachable_locations()
-        random.shuffle(location_list)
-        for location in location_list:
-            if location.item is not None and not location.item.advancement and not location.item.priority and not location.item.smallkey and not location.item.bigkey:
-                # safe to replace
-                replace_item = location.item
-                replace_item.location = None
-                itempool.append(replace_item)
-                world.push_item(location, item_to_place, True)
-                itempool.remove(item_to_place)
-                break
+def fast_equitable_fill(world, item_pool, fill_locations):
+    while item_pool and fill_locations:
+        item_to_place = item_pool.pop()
+        spot_to_fill = next(l for l in fill_locations if valid_dungeon_placement(item_to_place, l, world))
+        fill_locations.remove(spot_to_fill)
+        world.push_item(spot_to_fill, item_to_place, False)
+        track_dungeon_items(item_to_place, spot_to_fill, world)
 
 
 def lock_shop_locations(world, player):
     for shop, loc_names in shop_to_location_table.items():
         for loc in loc_names:
-            world.get_location(loc, player).event = True
             world.get_location(loc, player).locked = True
-    # I don't believe these locations exist in non-shopsanity
-    # if world.retro[player]:
-    #     for shop, loc_names in retro_shops.items():
-    #         for loc in loc_names:
-    #             world.get_location(loc, player).event = True
-    #             world.get_location(loc, player).locked = True
 
 
 def sell_potions(world, player):
@@ -479,7 +496,7 @@ def sell_potions(world, player):
             loc_choices += [world.get_location(loc, player) for loc in shop_to_location_table[shop.region.name]]
     locations = [loc for loc in loc_choices if not loc.item]
     for potion in ['Green Potion', 'Blue Potion', 'Red Potion']:
-        location = random.choice(locations)
+        location = random.choice(filter_locations(ItemFactory(potion, player), locations, world))
         locations.remove(location)
         p_item = next(item for item in world.itempool if item.name == potion and item.player == player)
         world.push_item(location, p_item, collect=False)
@@ -490,7 +507,9 @@ def sell_keys(world, player):
     # exclude the old man or take any caves because free keys are too good
     shop_names = {shop.region.name: shop for shop in world.shops[player] if shop.region.name in shop_to_location_table}
     choices = [(world.get_location(loc, player), shop) for shop in shop_names for loc in shop_to_location_table[shop]]
-    locations = [(loc, shop) for loc, shop in choices if not loc.item]
+    locations = [l for l, shop in choices]
+    locations = filter_locations(ItemFactory('Small Key (Universal)', player), locations, world)
+    locations = [(loc, shop) for loc, shop in choices if not loc.item and loc in locations]
     location, shop = random.choice(locations)
     universal_key = next(i for i in world.itempool if i.name == 'Small Key (Universal)' and i.player == player)
     world.push_item(location, universal_key, collect=False)

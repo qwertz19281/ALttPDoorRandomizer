@@ -22,6 +22,7 @@ def _wrap(name):
 
 # These are for intellisense purposes only, and will be overwritten below
 choice = _prng_inst.choice
+choices = _prng_inst.choices
 gauss = _prng_inst.gauss
 getrandbits = _prng_inst.getrandbits
 randint = _prng_inst.randint

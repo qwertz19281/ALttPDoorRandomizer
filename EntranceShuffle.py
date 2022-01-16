@@ -109,6 +109,7 @@ def link_entrances(world, player):
             links_house_doors = [i for i in LW_Single_Cave_Doors if i not in Isolated_LH_Doors_Open]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in bomb_shop_doors:
             bomb_shop_doors.remove(links_house)
         if links_house in blacksmith_doors:
@@ -173,6 +174,7 @@ def link_entrances(world, player):
             links_house_doors = [i for i in lw_entrances if i not in Isolated_LH_Doors_Open]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in lw_entrances:
             lw_entrances.remove(links_house)
 
@@ -417,6 +419,7 @@ def link_entrances(world, player):
             links_house_doors = [i for i in lw_entrances + lw_must_exits if i not in Isolated_LH_Doors_Open]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in lw_entrances:
             lw_entrances.remove(links_house)
         if links_house in lw_must_exits:
@@ -547,6 +550,7 @@ def link_entrances(world, player):
                 links_house_doors = [i for i in links_house_doors if i not in exclusions]
             links_house = random.choice(list(links_house_doors))
         connect_two_way(world, links_house, 'Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in entrances:
             entrances.remove(links_house)
         elif links_house in must_exits:
@@ -1017,6 +1021,7 @@ def link_entrances(world, player):
                 links_house_doors = [i for i in links_house_doors if i not in exclusions]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         exit_pool.remove(links_house)
         doors.remove(links_house)
 
@@ -1381,6 +1386,7 @@ def link_inverted_entrances(world, player):
             links_house_doors = [i for i in DW_Single_Cave_Doors if i not in Inverted_Dark_Sanctuary_Doors + Isolated_LH_Doors]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Inverted Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in bomb_shop_doors:
             bomb_shop_doors.remove(links_house)
         if links_house in blacksmith_doors:
@@ -1461,6 +1467,7 @@ def link_inverted_entrances(world, player):
             links_house_doors = [i for i in dw_entrances if i not in Inverted_Dark_Sanctuary_Doors + Isolated_LH_Doors]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Inverted Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in dw_entrances:
             dw_entrances.remove(links_house)
 
@@ -1590,6 +1597,7 @@ def link_inverted_entrances(world, player):
             links_house_doors = [i for i in dw_entrances if i not in Inverted_Dark_Sanctuary_Doors + Isolated_LH_Doors]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Inverted Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in dw_entrances:
             dw_entrances.remove(links_house)
 
@@ -1727,6 +1735,7 @@ def link_inverted_entrances(world, player):
             links_house_doors = [i for i in entrances + must_exits if i not in Inverted_Dark_Sanctuary_Doors + Isolated_LH_Doors]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Inverted Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         if links_house in entrances:
             entrances.remove(links_house)
         elif links_house in must_exits:
@@ -1860,6 +1869,7 @@ def link_inverted_entrances(world, player):
             links_house_doors = [i for i in doors if i not in Inverted_Dark_Sanctuary_Doors + Isolated_LH_Doors]
             links_house = random.choice(links_house_doors)
         connect_two_way(world, links_house, 'Inverted Links House Exit', player)
+        connect_exit(world, 'Chris Houlihan Room Exit', links_house, player)  # should match link's house
         doors.remove(links_house)
         exit_pool.remove(links_house)
 
@@ -3409,7 +3419,6 @@ inverted_mandatory_connections = [('Links House S&Q', 'Inverted Links House'),
                                   ('EDDM Flute', 'The Sky'),
                                   ('Dark Grassy Lawn Flute', 'The Sky'),
                                   ('Hammer Peg Area Flute', 'The Sky'),
-                                  ('Chris Houlihan Room Exit', 'Pyramid Ledge'),
                                   ('Bush Covered Lawn Inner Bushes', 'Light World'),
                                   ('Bush Covered Lawn Outer Bushes', 'Bush Covered Lawn'),
                                   ('Bush Covered Lawn Mirror Spot', 'Dark Grassy Lawn'),
@@ -3850,8 +3859,6 @@ indirect_connections = {
 # exitdata = (room_id, ow_area, vram_loc, scroll_y, scroll_x, link_y, link_x, camera_y, camera_x, unknown_1, unknown_2, door_1, door_2)
 
 # ToDo somehow merge this with creation of the locations
-
-# ToDo somehow merge this with creation of the locations
 door_addresses = {'Links House': (0x00, (0x0104, 0x2c, 0x0506, 0x0a9a, 0x0832, 0x0ae8, 0x08b8, 0x0b07, 0x08bf, 0x06, 0xfe, 0x0816, 0x0000)),
                   'Inverted Big Bomb Shop': (0x00, (0x0104, 0x2c, 0x0506, 0x0a9a, 0x0832, 0x0ae8, 0x08b8, 0x0b07, 0x08bf, 0x06, 0xfe, 0x0816, 0x0000)),
                   'Desert Palace Entrance (South)': (0x08, (0x0084, 0x30, 0x0314, 0x0c56, 0x00a6, 0x0ca8, 0x0128, 0x0cc3, 0x0133, 0x0a, 0xfa, 0x0000, 0x0000)),
@@ -4150,3 +4157,137 @@ exit_ids = {'Links House Exit': (0x01, 0x00),
             'Skull Pinball': 0x78,
             'Skull Pot Circle': 0x76,
             'Pyramid': 0x7B}
+
+ow_prize_table = {'Links House': (0x8b1, 0xb2d), 'Inverted Big Bomb Shop': (0x8b1, 0xb2d),
+                  'Desert Palace Entrance (South)': (0x108, 0xd70), 'Desert Palace Entrance (West)': (0x031, 0xca0),
+                  'Desert Palace Entrance (North)': (0x0e1, 0xba0), 'Desert Palace Entrance (East)': (0x191, 0xca0),
+                  'Eastern Palace': (0xf31, 0x620), 'Tower of Hera': (0x8D0, 0x080),
+                  'Hyrule Castle Entrance (South)': (0x7b0, 0x730), 'Hyrule Castle Entrance (West)': (0x700, 0x640),
+                  'Hyrule Castle Entrance (East)': (0x8a0, 0x640), 'Inverted Pyramid Entrance': (0x720, 0x700),
+                  'Agahnims Tower': (0x7e0, 0x640), 'Inverted Ganons Tower': (0x7e0, 0x640),
+                  'Thieves Town': (0x1d0, 0x780), 'Skull Woods First Section Door': (0x240, 0x280),
+                  'Skull Woods Second Section Door (East)': (0x1a0, 0x240),
+                  'Skull Woods Second Section Door (West)': (0x0c0, 0x1c0), 'Skull Woods Final Section': (0x082, 0x0b0),
+                  'Ice Palace': (0xca0, 0xda0),
+                  'Misery Mire': (0x100, 0xca0),
+                  'Palace of Darkness': (0xf40, 0x620), 'Swamp Palace': (0x759, 0xED0),
+                  'Turtle Rock': (0xf11, 0x103),
+                  'Dark Death Mountain Ledge (West)': (0xb80, 0x180),
+                  'Dark Death Mountain Ledge (East)': (0xc80, 0x180),
+                  'Turtle Rock Isolated Ledge Entrance': (0xc00, 0x240),
+                  'Hyrule Castle Secret Entrance Stairs': (0x850, 0x700),
+                  'Kakariko Well Cave': (0x060, 0x680),
+                  'Bat Cave Cave': (0x540, 0x8f0),
+                  'Elder House (East)': (0x2b0, 0x6a0),
+                  'Elder House (West)': (0x230, 0x6a0),
+                  'North Fairy Cave': (0xa80, 0x440),
+                  'Lost Woods Hideout Stump': (0x240, 0x280),
+                  'Lumberjack Tree Cave': (0x4e0, 0x004),
+                  'Two Brothers House (East)': (0x200, 0x0b60),
+                  'Two Brothers House (West)': (0x180, 0x0b60),
+                  'Sanctuary': (0x720, 0x4a0),
+                  'Old Man Cave (West)': (0x580, 0x2c0),
+                  'Old Man Cave (East)': (0x620, 0x2c0),
+                  'Old Man House (Bottom)': (0x720, 0x320),
+                  'Old Man House (Top)': (0x820, 0x220),
+                  'Death Mountain Return Cave (East)': (0x600, 0x220),
+                  'Death Mountain Return Cave (West)': (0x500, 0x1c0),
+                  'Spectacle Rock Cave Peak': (0x720, 0x0a0),
+                  'Spectacle Rock Cave': (0x790, 0x1a0),
+                  'Spectacle Rock Cave (Bottom)': (0x710, 0x0a0),
+                  'Paradox Cave (Bottom)': (0xd80, 0x180),
+                  'Paradox Cave (Middle)': (0xd80, 0x380),
+                  'Paradox Cave (Top)': (0xd80, 0x020),
+                  'Fairy Ascension Cave (Bottom)': (0xcc8, 0x2a0),
+                  'Fairy Ascension Cave (Top)': (0xc00, 0x240),
+                  'Spiral Cave': (0xb80, 0x180),
+                  'Spiral Cave (Bottom)': (0xb80, 0x2c0),
+                  'Bumper Cave (Bottom)': (0x580, 0x2c0),
+                  'Bumper Cave (Top)': (0x500, 0x1c0),
+                  'Superbunny Cave (Top)': (0xd80, 0x020),
+                  'Superbunny Cave (Bottom)': (0xd00, 0x180),
+                  'Hookshot Cave': (0xc80, 0x0c0),
+                  'Hookshot Cave Back Entrance': (0xcf0, 0x004),
+                  'Ganons Tower': (0x8D0, 0x080),
+                  'Inverted Agahnims Tower': (0x8D0, 0x080),
+                  'Pyramid Entrance': (0x640, 0x7c0),
+                  'Skull Woods First Section Hole (West)': None,
+                  'Skull Woods First Section Hole (East)': None,
+                  'Skull Woods First Section Hole (North)': None,
+                  'Skull Woods Second Section Hole': None,
+                  'Pyramid Hole': None,
+                  'Inverted Pyramid Hole': None,
+                  'Waterfall of Wishing': (0xe80, 0x280),
+                  'Dam': (0x759, 0xED0),
+                  'Blinds Hideout': (0x190, 0x6c0),
+                  'Hyrule Castle Secret Entrance Drop': None,
+                  'Bonk Fairy (Light)': (0x740, 0xa80),
+                  'Lake Hylia Fairy': (0xd40, 0x9f0),
+                  'Light Hype Fairy': (0x940, 0xc80),
+                  'Desert Fairy': (0x420, 0xe00),
+                  'Kings Grave': (0x920, 0x520),
+                  'Tavern North': None,  # can't mark this one technically
+                  'Chicken House': (0x120, 0x880),
+                  'Aginahs Cave': (0x2e0, 0xd00),
+                  'Sahasrahlas Hut': (0xcf0, 0x6c0),
+                  'Cave Shop (Lake Hylia)': (0xbc0, 0xc00),
+                  'Capacity Upgrade': (0xca0, 0xda0),
+                  'Kakariko Well Drop': None,
+                  'Blacksmiths Hut': (0x4a0, 0x880),
+                  'Bat Cave Drop': None,
+                  'Sick Kids House': (0x220, 0x880),
+                  'North Fairy Cave Drop': None,
+                  'Lost Woods Gamble': (0x240, 0x080),
+                  'Fortune Teller (Light)': (0x2c0, 0x4c0),
+                  'Snitch Lady (East)': (0x310, 0x7a0),
+                  'Snitch Lady (West)': (0x800, 0x7a0),
+                  'Bush Covered House': (0x2e0, 0x880),
+                  'Tavern (Front)': (0x270, 0x980),
+                  'Light World Bomb Hut': (0x070, 0x980),
+                  'Kakariko Shop': (0x170, 0x980),
+                  'Lost Woods Hideout Drop': None,
+                  'Lumberjack Tree Tree': None,
+                  'Cave 45': (0x440, 0xca0), 'Graveyard Cave': (0x8f0, 0x430),
+                  'Checkerboard Cave': (0x260, 0xc00),
+                  'Mini Moldorm Cave': (0xa40, 0xe80),
+                  'Long Fairy Cave': (0xf60, 0xb00),
+                  'Good Bee Cave': (0xec0, 0xc00),
+                  '20 Rupee Cave': (0xe80, 0xca0),
+                  '50 Rupee Cave': (0x4d0, 0xed0),
+                  'Ice Rod Cave': (0xe00, 0xc00),
+                  'Bonk Rock Cave': (0x5f0, 0x460),
+                  'Library': (0x270, 0xaa0),
+                  'Potion Shop': (0xc80, 0x4c0),
+                  'Sanctuary Grave': None,
+                  'Hookshot Fairy': (0xd00, 0x180),
+                  'Pyramid Fairy': (0x740, 0x740),
+                  'East Dark World Hint': (0xf60, 0xb00),
+                  'Palace of Darkness Hint': (0xd60, 0x7c0),
+                  'Dark Lake Hylia Fairy': (0xd40, 0x9f0),
+                  'Dark Lake Hylia Ledge Fairy': (0xe00, 0xc00),
+                  'Dark Lake Hylia Ledge Spike Cave': (0xe80, 0xca0),
+                  'Dark Lake Hylia Ledge Hint': (0xec0, 0xc00),
+                  'Hype Cave': (0x940, 0xc80),
+                  'Bonk Fairy (Dark)': (0x740, 0xa80),
+                  'Brewery': (0x170, 0x980), 'C-Shaped House': (0x310, 0x7a0), 'Chest Game': (0x800, 0x7a0),
+                  'Dark World Hammer Peg Cave': (0x4c0, 0x940),
+                  'Red Shield Shop': (0x500, 0x680),
+                  'Dark Sanctuary Hint': (0x720, 0x4a0),
+                  'Inverted Dark Sanctuary': (0x720, 0x4a0),
+                  'Fortune Teller (Dark)': (0x2c0, 0x4c0),
+                  'Dark World Shop': (0x2e0, 0x880),
+                  'Dark World Lumberjack Shop': (0x4e0, 0x0d0),
+                  'Dark World Potion Shop': (0xc80, 0x4c0),
+                  'Archery Game': (0x2f0, 0xaf0),
+                  'Mire Shed': (0x060, 0xc90),
+                  'Dark Desert Hint': (0x2e0, 0xd00),
+                  'Dark Desert Fairy': (0x1c0, 0xc90),
+                  'Spike Cave': (0x860, 0x180),
+                  'Cave Shop (Dark Death Mountain)': (0xd80, 0x180),
+                  'Dark Death Mountain Fairy': (0x620, 0x2c0),
+                  'Mimic Cave': (0xc80, 0x180),
+                  'Big Bomb Shop': (0x8b1, 0xb2d), 'Inverted Links House': (0x8b1, 0xb2d),
+                  'Dark Lake Hylia Shop': (0xa40, 0xc40),
+                  'Lumberjack House': (0x4e0, 0x0d0),
+                  'Lake Hylia Fortune Teller': (0xa40, 0xc40),
+                  'Kakariko Gamble Game': (0x2f0, 0xaf0)}

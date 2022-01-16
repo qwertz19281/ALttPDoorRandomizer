@@ -19,6 +19,17 @@
         "dungeonssimple"
       ]
     },
-    "shufflelinks":     { "type": "checkbox" }
+    "shufflelinks":     { "type": "checkbox" },
+    "overworld_map": {
+      "type": "selectbox",
+      "options": [
+        "default",
+        "compass",
+        "map"
+      ],
+      "config": {
+        "width": 45
+      }
+    }
   }
 }

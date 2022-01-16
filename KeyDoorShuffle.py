@@ -5,7 +5,8 @@ from collections import defaultdict, deque
 from BaseClasses import DoorType, dungeon_keys, KeyRuleType, RegionType
 from Regions import dungeon_events
 from Dungeons import dungeon_keys, dungeon_bigs, dungeon_table
-from DungeonGenerator import ExplorationState, special_big_key_doors
+from DungeonGenerator import ExplorationState, special_big_key_doors, count_locations_exclude_big_chest, prize_or_event
+from DungeonGenerator import reserved_location, blind_boss_unavail
 
 
 class KeyLayout(object):
@@ -186,6 +187,8 @@ class PlacementRule(object):
             return True
         available_keys = outside_keys
         empty_chests = 0
+        # todo: sometimes we need an extra empty chest to accomodate the big key too
+        # dungeon bias seed 563518200 for example
         threshold = self.needed_keys_wo_bk if bk_blocked else self.needed_keys_w_bk
         for loc in check_locations:
             if not loc.item:
@@ -1100,40 +1103,30 @@ def location_is_bk_locked(loc, key_logic):
     return loc in key_logic.bk_chests or loc in key_logic.bk_locked
 
 
-def prize_or_event(loc):
-    return loc.name in dungeon_events or '- Prize' in loc.name or loc.name in ['Agahnim 1', 'Agahnim 2']
+# todo: verfiy this code is defunct
+# def prize_or_event(loc):
+#     return loc.name in dungeon_events or '- Prize' in loc.name or loc.name in ['Agahnim 1', 'Agahnim 2']
+#
+#
+# def reserved_location(loc, world, player):
+#     return loc in world.item_pool.config.reserved_locations[player]
+#
+#
+# def blind_boss_unavail(loc, state, world, player):
+#     if loc.name == "Thieves' Town - Boss":
+#         return (loc.parent_region.dungeon.boss.name == 'Blind' and
+#                 (not any(x for x in state.found_locations if x.name == 'Suspicious Maiden') or
+#                  (world.get_region('Thieves Attic Window', player).dungeon.name == 'Thieves Town' and
+#                   not any(x for x in state.found_locations if x.name == 'Attic Cracked Floor'))))
+#     return False
 
 
-def boss_unavail(loc, world, player):
-    # todo: ambrosia
-    # return world.bossdrops[player] == 'ambrosia' and "- Boss" in loc.name
-    return False
-
-
-def blind_boss_unavail(loc, state, world, player):
-    if loc.name == "Thieves' Town - Boss":
-        # todo: check attic
-        return (loc.parent_region.dungeon.boss.name == 'Blind' and
-                (not any(x for x in state.found_locations if x.name == 'Suspicious Maiden') or
-                 (world.get_region('Thieves Attic Window', player).dungeon.name == 'Thieves Town' and
-                  not any(x for x in state.found_locations if x.name == 'Attic Cracked Floor'))))
-    return False
-
-
+# counts free locations for keys - hence why reserved locations don't count
 def count_free_locations(state, world, player):
     cnt = 0
     for loc in state.found_locations:
-        if (not prize_or_event(loc) and not loc.forced_item and not boss_unavail(loc, world, player)
-           and not blind_boss_unavail(loc, state, world, player)):
-            cnt += 1
-    return cnt
-
-
-def count_locations_exclude_big_chest(state, world, player):
-    cnt = 0
-    for loc in state.found_locations:
-        if ('- Big Chest' not in loc.name and not loc.forced_item and not boss_unavail(loc, world, player)
-           and not prize_or_event(loc) and not blind_boss_unavail(loc, state, world, player)):
+        if (not prize_or_event(loc) and not loc.forced_item and not reserved_location(loc, world, player)
+           and not blind_boss_unavail(loc, state.found_locations, world, player)):
             cnt += 1
     return cnt
 
@@ -1437,7 +1430,7 @@ def validate_key_layout_sub_loop(key_layout, state, checked_states, flat_proposa
     if state.big_key_opened:
         ttl_locations = count_free_locations(state, world, player)
     else:
-        ttl_locations = count_locations_exclude_big_chest(state, world, player)
+        ttl_locations = count_locations_exclude_big_chest(state.found_locations, world, player)
     ttl_small_key_only = count_small_key_only_locations(state)
     available_small_locations = cnt_avail_small_locations(ttl_locations, ttl_small_key_only, state, world, player)
     available_big_locations = cnt_avail_big_locations(ttl_locations, state, world, player)
@@ -1663,7 +1656,7 @@ def can_open_door(door, state, world, player):
     if state.big_key_opened:
         ttl_locations = count_free_locations(state, world, player)
     else:
-        ttl_locations = count_locations_exclude_big_chest(state, world, player)
+        ttl_locations = count_locations_exclude_big_chest(state.found_locations, world, player)
     if door.smallKey:
         ttl_small_key_only = count_small_key_only_locations(state)
         available_small_locations = cnt_avail_small_locations(ttl_locations, ttl_small_key_only, state, world, player)

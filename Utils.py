@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import os
 import re
-import operator as op
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from functools import reduce
+from math import factorial
 
 
 def int16_as_bytes(value):
@@ -134,10 +133,7 @@ def kth_combination(k, l, r):
 def ncr(n, r):
     if r == 0:
         return 1
-    r = min(r, n-r)
-    numerator = reduce(op.mul, range(n, n-r, -1), 1)
-    denominator = reduce(op.mul, range(1, r+1), 1)
-    return numerator / denominator
+    return factorial(n) // factorial(r) // factorial(n-r)
 
 
 entrance_offsets = {

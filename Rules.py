@@ -4,6 +4,7 @@ from collections import deque
 
 import OverworldGlitchRules
 from BaseClasses import CollectionState, RegionType, DoorType, Entrance, CrystalBarrier, KeyRuleType
+from Dungeons import dungeon_table
 from RoomData import DoorKind
 from OverworldGlitchRules import overworld_glitches_rules
 
@@ -559,10 +560,28 @@ def global_rules(world, player):
     add_key_logic_rules(world, player)
     # End of door rando rules.
 
+    if world.restrict_boss_items[player] != 'none':
+        def add_mc_rule(l):
+            boss_location = world.get_location(l, player)
+            d_name = boss_location.parent_region.dungeon.name
+            compass_name = f'Compass ({d_name})'
+            map_name = f'Map ({d_name})'
+            add_rule(boss_location, lambda state: state.has(compass_name, player) and state.has(map_name, player))
+
+        for dungeon, info in dungeon_table.items():
+            if info.prize:
+                d_name = "Thieves' Town" if dungeon.startswith('Thieves') else dungeon
+                for loc in [info.prize, f'{d_name} - Boss']:
+                    add_mc_rule(loc)
+        if world.doorShuffle[player] == 'crossed':
+            add_mc_rule('Agahnim 1')
+        add_mc_rule('Agahnim 2')
+
     add_rule(world.get_location('Sunken Treasure', player), lambda state: state.has('Open Floodgate', player))
     set_rule(world.get_location('Ganon', player), lambda state: state.has_beam_sword(player) and state.has_fire_source(player) and state.has_crystals(world.crystals_needed_for_ganon[player], player)
                                                                 and (state.has('Tempered Sword', player) or state.has('Golden Sword', player) or (state.has('Silver Arrows', player) and state.can_shoot_arrows(player)) or state.has('Lamp', player) or state.can_extend_magic(player, 12)))  # need to light torch a sufficient amount of times
     set_rule(world.get_entrance('Ganon Drop', player), lambda state: state.has_beam_sword(player))  # need to damage ganon to get tiles to drop
+
 
 def bomb_rules(world, player):
     bonkable_doors = ['Two Brothers House Exit (West)', 'Two Brothers House Exit (East)'] # Technically this is incorrectly defined, but functionally the same as what is intended.
@@ -1203,7 +1222,6 @@ def standard_rules(world, player):
     for location in ['Mushroom', 'Bottle Merchant', 'Flute Spot', 'Sunken Treasure', 'Purple Chest', 'Maze Race']:
         add_rule(world.get_location(location, player), lambda state: state.has('Zelda Delivered', player))
 
-    # Bonk Fairy (Light) is a notable omission in ER shuffles/Retro
     for entrance in ['Blinds Hideout', 'Zoras River', 'Kings Grave Outer Rocks', 'Dam', 'Tavern North', 'Chicken House',
                      'Aginahs Cave', 'Sahasrahlas Hut', 'Kakariko Well Drop', 'Kakariko Well Cave', 'Blacksmiths Hut',
                      'Bat Cave Drop Ledge', 'Bat Cave Cave', 'Sick Kids House', 'Hobo Bridge',

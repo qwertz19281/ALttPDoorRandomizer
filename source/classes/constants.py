@@ -72,13 +72,15 @@ SETTINGSTOPROCESS = {
       "progressives": "progressive",
       "accessibility": "accessibility",
       "sortingalgo": "algorithm",
-      "beemizer": "beemizer"
+      "beemizer": "beemizer",
+      "restrict_boss_items": "restrict_boss_items"
     },
     "entrance": {
       "openpyramid": "openpyramid",
       "shuffleganon": "shuffleganon",
       "shufflelinks": "shufflelinks",
       "entranceshuffle": "shuffle",
+      "overworld_map": "overworld_map",
       "entranceoverride": "entranceoverride"
     },
     "enemizer": {

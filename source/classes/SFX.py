@@ -126,7 +126,7 @@ def shuffle_sfx_data():
     random.shuffle(candidates)
 
     # place chained sfx first
-    random.shuffle(chained_sfx) # todo: sort largest to smallest
+    random.shuffle(chained_sfx)
     chained_sfx = sorted(chained_sfx, key=lambda x: len(x.chain), reverse=True)
     for chained in chained_sfx:
         chosen_slot = next(x for x in candidates if len(accompaniment_map[x[0]]) - len(chained.chain) >= 0)

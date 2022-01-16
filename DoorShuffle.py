@@ -44,10 +44,10 @@ def link_doors(world, player):
             reset_rooms(world, player)
             world.get_door("Skull Pinball WS", player).no_exit()
             world.swamp_patch_required[player] = orig_swamp_patch
+            link_doors_prep(world, player)
 
 
-def link_doors_main(world, player):
-
+def link_doors_prep(world, player):
     # Drop-down connections & push blocks
     for exitName, regionName in logical_connections:
         connect_simple_door(world, exitName, regionName, player)
@@ -99,6 +99,7 @@ def link_doors_main(world, player):
             analyze_portals(world, player)
         for portal in world.dungeon_portals[player]:
             connect_portal(portal, world, player)
+
     if not world.doorShuffle[player] == 'vanilla':
         fix_big_key_doors_with_ugly_smalls(world, player)
     else:
@@ -119,11 +120,14 @@ def link_doors_main(world, player):
         for ent, ext in default_one_way_connections:
             connect_one_way(world, ent, ext, player)
         vanilla_key_logic(world, player)
-    elif world.doorShuffle[player] == 'basic':
+
+
+def link_doors_main(world, player):
+    if world.doorShuffle[player] == 'basic':
         within_dungeon(world, player)
     elif world.doorShuffle[player] == 'crossed':
         cross_dungeon(world, player)
-    else:
+    elif world.doorShuffle[player] != 'vanilla':
         logging.getLogger('').error('Invalid door shuffle setting: %s' % world.doorShuffle[player])
         raise Exception('Invalid door shuffle setting: %s' % world.doorShuffle[player])
 
@@ -214,9 +218,14 @@ def vanilla_key_logic(world, player):
             world.key_logic[player] = {}
         analyze_dungeon(key_layout, world, player)
         world.key_logic[player][builder.name] = key_layout.key_logic
+        world.key_layout[player][builder.name] = key_layout
         log_key_logic(builder.name, key_layout.key_logic)
     # if world.shuffle[player] == 'vanilla' and world.accessibility[player] == 'items' and not world.retro[player] and not world.keydropshuffle[player]:
     #     validate_vanilla_key_logic(world, player)
+
+
+def validate_vanilla_reservation(dungeon, world, player):
+    return validate_key_layout(world.key_layout[player][dungeon.name], world, player)
 
 
 # some useful functions
@@ -1278,6 +1287,7 @@ def refine_boss_exits(world, player):
             if 0 < len(filtered) < len(reachable_portals):
                 reachable_portals = filtered
             chosen_one = random.choice(reachable_portals) if len(reachable_portals) > 1 else reachable_portals[0]
+            chosen_one.chosen = True
             if chosen_one != current_boss:
                 chosen_one.change_boss_exit(current_boss.boss_exit_idx)
                 current_boss.change_boss_exit(-1)
