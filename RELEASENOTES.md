@@ -111,3 +111,8 @@ The map and compass are logically required to defeat a boss. This prevents both 
 ##### dungeon
 
 Same as above but both small keys and bigs keys of the dungeon are not allowed on a boss. (Note: this does not affect universal keys as they are not dungeon-specific)
+
+## Notes and Bug Fixes
+
+* 1.0.0.1
+	* Add Light Hype Fairy to bombbag mode as needing bombs
