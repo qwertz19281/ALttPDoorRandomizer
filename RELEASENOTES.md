@@ -67,7 +67,7 @@ In multiworld, the districts chosen apply to all players.
 
 ## New Hints
 
-Based on the district algorithm above (whether it is enabled or not,) new hints can appear stating that a district or dungeon is considered a "foolish" choice. The means there are no advancement items in that district (or that the district was not chosen if the district restriction is used).
+Based on the district algorithm above (whether it is enabled or not,) new hints can appear about that district or dungeon. For each district and dungeon, it is evaluated whether it contains vital items and how many. If it has not any vital item, items then it moves onto useful items. Useful items are generally safeties or convenience items: shields, mails, half magic, bottles, medallions that aren't required, etc. If it contains none of those and is an overworld district, then it check for a couple more things. First, if dungeons are shuffled, it looks to see if any are in the district, if so, one of those dungeons is picked for the hint. Then, if connectors are shuffled, it checks to see if you can get to unique region through a connector in that district. If none of the above apply, the district or dungeon is considered completely foolish. At least two "foolish" districts are chosen and the rest are random.
 
 
 ### Overworld Map shows dungeon location
@@ -114,5 +114,14 @@ Same as above but both small keys and bigs keys of the dungeon are not allowed o
 
 ## Notes and Bug Fixes
 
+* 1.0.0.2
+	* Include 1.0.1 fixes
+	* District hint rework
 * 1.0.0.1
 	* Add Light Hype Fairy to bombbag mode as needing bombs
+	
+### From stable DoorDev
+
+* 1.0.1
+	* Fixed a bug with key doors not detecting one side of an interior door
+	* Sprite selector fix for systems with SSL issues

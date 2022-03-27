@@ -2182,29 +2182,60 @@ def write_strings(rom, world, player, team):
             else:
                 tt[hint_locations.pop(0)] = this_hint
 
-        if world.algorithm != 'district':
-            hint_candidates = []
-            for name, district in world.districts[player].items():
-                foolish = True
-                for loc_name in district.locations:
-                    location = world.get_location(loc_name, player)
-                    if location.item.advancement:
-                        foolish = False
-                        break
-                if foolish:
-                    hint_candidates.append(f'{name} is a foolish choice')
-            foolish_choice_hints = min(len(hint_candidates), len(hint_locations))
-            for i in range(0, foolish_choice_hints):
-                tt[hint_locations.pop(0)] = hint_candidates.pop(0)
-        if world.algorithm == 'district':
-            hint_candidates = []
-            for name, district in world.districts[player].items():
-                if name not in world.item_pool_config.recorded_choices and not district.sphere_one:
-                    hint_candidates.append(f'{name} is a foolish choice')
-            random.shuffle(hint_candidates)
-            foolish_choice_hints = min(len(hint_candidates), len(hint_locations))
-            for i in range(0, foolish_choice_hints):
-                tt[hint_locations.pop(0)] = hint_candidates.pop(0)
+        hint_candidates = []
+        for name, district in world.districts[player].items():
+            hint_type = 'foolish'
+            choice_set = set()
+            item_count, item_type = 0, 'useful'
+            for loc_name in district.locations:
+                location_item = world.get_location(loc_name, player).item
+                if location_item.advancement:
+                    if 'Heart Container' in location_item.name:
+                        continue
+                    itm_type = 'useful' if useful_item_for_hint(location_item, world) else 'vital'
+                    hint_type = 'path'
+                    if item_type == itm_type:
+                        choice_set.add(location_item)
+                        item_count += 1
+                    elif itm_type == 'vital':
+                        item_type = 'vital'
+                        item_count = 1
+                        choice_set.clear()
+                        choice_set.add(location_item)
+            if hint_type == 'foolish':
+                if district.dungeons and world.shuffle[player] != 'vanilla':
+                    choice_set.update(district.dungeons)
+                    hint_type = 'dungeon_path'
+                elif district.access_points and world.shuffle[player] not in ['vanilla', 'dungeonssimple',
+                                                                              'dungeonsfull']:
+                    choice_set.update([x.hint_text for x in district.access_points])
+                    hint_type = 'connector'
+            if hint_type == 'foolish':
+                hint_candidates.append((hint_type, f'{name} is a foolish choice'))
+            elif hint_type == 'dungeon_path':
+                choices = sorted(list(choice_set))
+                dungeon_choice = random.choice(choices)  # prefer required dungeons...
+                hint_candidates.append((hint_type, f'{name} is on the path to {dungeon_choice}'))
+            elif hint_type == 'connector':
+                choices = sorted(list(choice_set))
+                access_point = random.choice(choices)  # prefer required access...
+                hint_candidates.append((hint_type, f'{name} can reach {access_point}'))
+            elif hint_type == 'path':
+                if item_count == 1:
+                    the_item = text_for_item(next(iter(choice_set)), world, player, team)
+                    hint_candidates.append((hint_type, f'{name} conceals {the_item}'))
+                else:
+                    hint_candidates.append((hint_type, f'{name} conceals {item_count} {item_type} items'))
+        district_hints = min(len(hint_candidates), len(hint_locations))
+        random.shuffle(hint_candidates)
+        hint_candidates.sort(key=lambda x: 1 if x[0] == 'foolish' else 0)
+        foolish_only = min(2, district_hints)  # 2 foolish only
+        for i in range(0, foolish_only):
+            tt[hint_locations.pop(0)] = hint_candidates.pop(0)[1]
+        random.shuffle(hint_candidates)
+        district_hints -= foolish_only  # the rest can be anything
+        for i in range(0, district_hints):
+            tt[hint_locations.pop(0)] = hint_candidates.pop(0)[1]
         if len(hint_locations) > 0:
             # All remaining hint slots are filled with junk hints. It is done this way to ensure the same junk hint
             # isn't selected twice.
@@ -2357,6 +2388,25 @@ def write_strings(rom, world, player, team):
     (pointers, data) = credits.get_bytes()
     rom.write_bytes(0x181500, data)
     rom.write_bytes(0x76CC0, [byte for p in pointers for byte in [p & 0xFF, p >> 8 & 0xFF]])
+
+
+useful_item_names = {
+    'Mushroom', 'Shovel', 'Magic Powder', 'Progressive Shield', 'Progressive Armor', 'Blue Mail',  'Red Mail',
+    'Mirror Shield', 'Blue Boomerang', 'Red Boomerang', 'Bug Catching Net', 'Cane of Byrna', 'Cape',
+    'Magic Upgrade (1/2)', 'Magic Upgrade (1/4)', 'Ether', 'Quake'}
+
+
+def useful_item_for_hint(item, world):
+    return 'Bottle' in item.name or (item.name in useful_item_names
+                                     and item.name not in world.required_medallions[item.player])
+
+
+def text_for_item(item, world, player, team):
+    if item.player == player:
+        return item.hint_text
+    else:
+        return f'{item.hint_text} for {world.player_names[item.player][team]}'
+
 
 def set_inverted_mode(world, player, rom):
     rom.write_byte(snes_to_pc(0x0283E0), 0xF0)  # residual portals

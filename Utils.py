@@ -131,7 +131,7 @@ def kth_combination(k, l, r):
 
 
 def ncr(n, r):
-    if r == 0:
+    if r == 0 or r >= n:
         return 1
     return factorial(n) // factorial(r) // factorial(n-r)
 

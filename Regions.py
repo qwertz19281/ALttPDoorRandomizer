@@ -88,17 +88,17 @@ def create_regions(world, player):
         create_lw_region(player, 'Lake Hylia Island', ['Lake Hylia Island']),
         create_cave_region(player, 'Capacity Upgrade', 'the queen of fairies', ['Capacity Upgrade - Left', 'Capacity Upgrade - Right']),
         create_cave_region(player, 'Two Brothers House', 'a connector', None, ['Two Brothers House Exit (East)', 'Two Brothers House Exit (West)']),
-        create_lw_region(player, 'Maze Race Ledge', ['Maze Race'], ['Two Brothers House (West)']),
+        create_lw_region(player, 'Maze Race Ledge', ['Maze Race'], ['Two Brothers House (West)'], 'a race against time'),
         create_cave_region(player, '50 Rupee Cave', 'a cave with some cash'),
-        create_lw_region(player, 'Desert Ledge', ['Desert Ledge'], ['Desert Palace Entrance (North) Rocks', 'Desert Palace Entrance (West)']),
+        create_lw_region(player, 'Desert Ledge', ['Desert Ledge'], ['Desert Palace Entrance (North) Rocks', 'Desert Palace Entrance (West)'], 'the desert ledge'),
         create_lw_region(player, 'Desert Ledge (Northeast)', None, ['Checkerboard Cave']),
         create_lw_region(player, 'Desert Palace Stairs', None, ['Desert Palace Entrance (South)']),
-        create_lw_region(player, 'Desert Palace Lone Stairs', None, ['Desert Palace Stairs Drop', 'Desert Palace Entrance (East)']),
-        create_lw_region(player, 'Desert Palace Entrance (North) Spot', None, ['Desert Palace Entrance (North)', 'Desert Ledge Return Rocks']),
+        create_lw_region(player, 'Desert Palace Lone Stairs', None, ['Desert Palace Stairs Drop', 'Desert Palace Entrance (East)'], 'a sandy vista'),
+        create_lw_region(player, 'Desert Palace Entrance (North) Spot', None, ['Desert Palace Entrance (North)', 'Desert Ledge Return Rocks'], 'the desert ledge'),
         create_lw_region(player, 'Master Sword Meadow', ['Master Sword Pedestal']),
         create_cave_region(player, 'Lost Woods Gamble', 'a game of chance'),
         create_lw_region(player, 'Hyrule Castle Courtyard', None, ['Hyrule Castle Secret Entrance Stairs', 'Hyrule Castle Entrance (South)']),
-        create_lw_region(player, 'Hyrule Castle Ledge', None, ['Hyrule Castle Entrance (East)', 'Hyrule Castle Entrance (West)', 'Agahnims Tower', 'Hyrule Castle Ledge Courtyard Drop']),
+        create_lw_region(player, 'Hyrule Castle Ledge', None, ['Hyrule Castle Entrance (East)', 'Hyrule Castle Entrance (West)', 'Agahnims Tower', 'Hyrule Castle Ledge Courtyard Drop'], 'the castle rampart'),
         create_dungeon_region(player, 'Sewer Drop', 'a drop\'s exit', None, ['Sewer Drop']),  # This exists only to be referenced for access checks
 
         create_cave_region(player, 'Old Man Cave', 'a connector', ['Old Man'], ['Old Man Cave Exit (East)']),
@@ -107,7 +107,7 @@ def create_regions(world, player):
         create_cave_region(player, 'Old Man House Back', 'a connector', None, ['Old Man House Exit (Top)', 'Old Man House Back to Front']),
         create_lw_region(player, 'Death Mountain', None, ['Old Man Cave (East)', 'Old Man House (Bottom)', 'Old Man House (Top)', 'Death Mountain Return Cave (East)', 'Spectacle Rock Cave', 'Spectacle Rock Cave Peak', 'Spectacle Rock Cave (Bottom)', 'Broken Bridge (West)', 'Death Mountain Teleporter']),
         create_cave_region(player, 'Death Mountain Return Cave', 'a connector', None, ['Death Mountain Return Cave Exit (West)', 'Death Mountain Return Cave Exit (East)']),
-        create_lw_region(player, 'Death Mountain Return Ledge', None, ['Death Mountain Return Ledge Drop', 'Death Mountain Return Cave (West)']),
+        create_lw_region(player, 'Death Mountain Return Ledge', None, ['Death Mountain Return Ledge Drop', 'Death Mountain Return Cave (West)'], 'a ledge in the foothills'),
         create_cave_region(player, 'Spectacle Rock Cave (Top)', 'a connector', ['Spectacle Rock Cave'], ['Spectacle Rock Cave Drop', 'Spectacle Rock Cave Exit (Top)']),
         create_cave_region(player, 'Spectacle Rock Cave (Bottom)', 'a connector', None, ['Spectacle Rock Cave Exit']),
         create_cave_region(player, 'Spectacle Rock Cave (Peak)', 'a connector', None, ['Spectacle Rock Cave Peak Drop', 'Spectacle Rock Cave Exit (Peak)']),
@@ -173,10 +173,10 @@ def create_regions(world, player):
         create_cave_region(player, 'Red Shield Shop', 'the rare shop', ['Red Shield Shop - Left', 'Red Shield Shop - Middle', 'Red Shield Shop - Right']),
         create_cave_region(player, 'Dark Sanctuary Hint', 'a storyteller'),
         create_cave_region(player, 'Bumper Cave', 'a connector', None, ['Bumper Cave Exit (Bottom)', 'Bumper Cave Exit (Top)']),
-        create_dw_region(player, 'Bumper Cave Ledge', ['Bumper Cave Ledge'], ['Bumper Cave Ledge Drop', 'Bumper Cave (Top)', 'Bumper Cave Ledge Mirror Spot']),
+        create_dw_region(player, 'Bumper Cave Ledge', ['Bumper Cave Ledge'], ['Bumper Cave Ledge Drop', 'Bumper Cave (Top)', 'Bumper Cave Ledge Mirror Spot'], 'a ledge with an item'),
         create_dw_region(player, 'Skull Woods Forest', None, ['Skull Woods First Section Hole (East)', 'Skull Woods First Section Hole (West)', 'Skull Woods First Section Hole (North)',
                                                       'Skull Woods First Section Door', 'Skull Woods Second Section Door (East)']),
-        create_dw_region(player, 'Skull Woods Forest (West)', None, ['Skull Woods Second Section Hole', 'Skull Woods Second Section Door (West)', 'Skull Woods Final Section']),
+        create_dw_region(player, 'Skull Woods Forest (West)', None, ['Skull Woods Second Section Hole', 'Skull Woods Second Section Door (West)', 'Skull Woods Final Section'], 'a deep, dark forest'),
         create_dw_region(player, 'Dark Desert',  None, ['Misery Mire', 'Mire Shed', 'Desert Ledge (Northeast) Mirror Spot', 'Desert Ledge Mirror Spot', 'Desert Palace Stairs Mirror Spot',
                                                 'Desert Palace Entrance (North) Mirror Spot', 'Dark Desert Hint', 'Dark Desert Fairy']),
         create_cave_region(player, 'Mire Shed', 'a cave with two chests', ['Mire Shed - Left', 'Mire Shed - Right']),
@@ -184,8 +184,8 @@ def create_regions(world, player):
         create_dw_region(player, 'Dark Death Mountain (West Bottom)', None, ['Spike Cave', 'Spectacle Rock Mirror Spot', 'Dark Death Mountain Fairy']),
         create_dw_region(player, 'Dark Death Mountain (Top)', None, ['Dark Death Mountain Drop (East)', 'Dark Death Mountain Drop (West)', 'Ganons Tower', 'Superbunny Cave (Top)',
                                                                      'Hookshot Cave', 'East Death Mountain (Top) Mirror Spot', 'Turtle Rock']),
-        create_dw_region(player, 'Dark Death Mountain Ledge', None, ['Dark Death Mountain Ledge (East)', 'Dark Death Mountain Ledge (West)', 'Mimic Cave Mirror Spot', 'Spiral Cave Mirror Spot']),
-        create_dw_region(player, 'Dark Death Mountain Isolated Ledge', None, ['Isolated Ledge Mirror Spot', 'Turtle Rock Isolated Ledge Entrance']),
+        create_dw_region(player, 'Dark Death Mountain Ledge', None, ['Dark Death Mountain Ledge (East)', 'Dark Death Mountain Ledge (West)', 'Mimic Cave Mirror Spot', 'Spiral Cave Mirror Spot'], 'a dark ledge'),
+        create_dw_region(player, 'Dark Death Mountain Isolated Ledge', None, ['Isolated Ledge Mirror Spot', 'Turtle Rock Isolated Ledge Entrance'], 'a dark vista'),
         create_dw_region(player, 'Dark Death Mountain (East Bottom)', None, ['Superbunny Cave (Bottom)', 'Cave Shop (Dark Death Mountain)', 'Fairy Ascension Mirror Spot']),
         create_cave_region(player, 'Superbunny Cave (Top)', 'a connector', ['Superbunny Cave - Top', 'Superbunny Cave - Bottom'], ['Superbunny Cave Exit (Top)']),
         create_cave_region(player, 'Superbunny Cave (Bottom)', 'a connector', None, ['Superbunny Cave Climb', 'Superbunny Cave Exit (Bottom)']),
@@ -195,7 +195,7 @@ def create_regions(world, player):
         create_cave_region(player, 'Hookshot Cave (Back)', 'a connector', None, ['Hookshot Cave Back to Middle', 'Hookshot Cave Back Exit']),
         create_cave_region(player, 'Hookshot Cave (Middle)', 'a connector', None, ['Hookshot Cave Middle to Back', 'Hookshot Cave Middle to Front']),
 
-        create_dw_region(player, 'Death Mountain Floating Island (Dark World)', None, ['Floating Island Drop', 'Hookshot Cave Back Entrance', 'Floating Island Mirror Spot']),
+        create_dw_region(player, 'Death Mountain Floating Island (Dark World)', None, ['Floating Island Drop', 'Hookshot Cave Back Entrance', 'Floating Island Mirror Spot'], 'a dark island'),
         create_lw_region(player, 'Death Mountain Floating Island (Light World)', ['Floating Island']),
         create_dw_region(player, 'Turtle Rock (Top)', None, ['Turtle Rock Drop']),
         create_lw_region(player, 'Mimic Cave Ledge', None, ['Mimic Cave']),
@@ -887,12 +887,12 @@ def create_menu_region(player, name, locations=None, exits=None):
     return _create_region(player, name, RegionType.Menu, 'Menu', locations, exits)
 
 
-def create_lw_region(player, name, locations=None, exits=None):
-    return _create_region(player, name, RegionType.LightWorld, 'Light World', locations, exits)
+def create_lw_region(player, name, locations=None, exits=None, hint='Light World'):
+    return _create_region(player, name, RegionType.LightWorld, hint, locations, exits)
 
 
-def create_dw_region(player, name, locations=None, exits=None):
-    return _create_region(player, name, RegionType.DarkWorld, 'Dark World', locations, exits)
+def create_dw_region(player, name, locations=None, exits=None, hint='Dark World'):
+    return _create_region(player, name, RegionType.DarkWorld, hint, locations, exits)
 
 
 def create_cave_region(player, name, hint='Hyrule', locations=None, exits=None):
